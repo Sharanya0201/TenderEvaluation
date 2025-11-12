@@ -124,7 +124,6 @@ class TenderEvaluation(Base):
     
     # Relationships
     tender = relationship("Tender", back_populates="evaluations")
-    vendor = relationship("Vendor", back_populates="evaluations")
     criterion = relationship("EvaluationCriterion", back_populates="tender_evaluations")
     evaluator = relationship("User")
     

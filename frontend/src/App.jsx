@@ -13,7 +13,6 @@ import UserManagementPage from "./pages/UserManagementPage";
 import RoleManagementPage from "./pages/RoleManagementPage";
 import ManageTenderTypesPage from "./pages/ManageTenderTypes";
 import EvaluationCriteriaPage from "./pages/EvaluationCriteriaPage";
-import AIEvaluationPage from "./pages/AIEvaluationPage";
 import TenderStatus from "./pages/Tenderstatus";
 
 function App() {
@@ -43,7 +42,7 @@ function App() {
             <Route path="tendertypes" element={<ManageTenderTypesPage />} />
             <Route path="Tenderstatus" element={<TenderStatus />} />
             <Route path="evaluationcriteria" element={<EvaluationCriteriaPage />} />
-            <Route path="aievaluation" element={<AIEvaluationPage />} />
+           
           </Route>
 
           {/* Fallback */}
