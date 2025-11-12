@@ -70,7 +70,6 @@ class Tender(Base):
     status = Column(String)
 
     # Relationships
-    vendor_mappings = relationship("TenderVendorMapping", back_populates="tender")
     evaluations = relationship("TenderEvaluation", back_populates="tender")
     __table_args__ = {"extend_existing": True}
 
@@ -147,6 +146,5 @@ class OCRResult(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
     # Relationship
-    document = relationship("VendorDocument", backref="ocr_results")
     
     __table_args__ = {"extend_existing": True}
