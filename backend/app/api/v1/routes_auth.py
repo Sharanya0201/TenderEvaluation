@@ -1,262 +1,188 @@
-import traceback
-from typing import Any, Dict, List
-import shutil
-import uuid
-from pathlib import Path
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, logger, status
+
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
+
 from app.db.database import get_db
+
+# ---------- Schemas ----------
 from app.schemas.user import (
-    UserCreate,
-    UserLogin,
-    UserUpdate,
-    UserResponse,
-    UserListResponse,
-    UserStatusUpdate,
-    RoleListResponse,
-    RoleCreate,
-    RoleUpdate,
-    RoleResponseWithMessage,
-    RoleStatusUpdate,
+    UserCreate, UserLogin, UserUpdate, UserResponse, UserListResponse,
+    UserStatusUpdate, RoleListResponse, RoleCreate, RoleUpdate,
+    RoleResponseWithMessage, RoleStatusUpdate,
 )
 from app.schemas.tender_types import TenderTypeCreate, TenderTypeUpdate
-from app.services.auth_service import (
-    register_user,
-    login_user,
-    get_users,
-    get_user_by_id,
-    create_user,
-    update_user,
-    delete_user,
-    toggle_user_status,
-    get_roles,
-    get_roles_with_pagination,  # Renamed function
-    get_role_by_id,
-    create_role,
-    update_role,
-    delete_role,
-    toggle_role_status,
-)
-
-from app.models.user import OCRResult, TenderAttachment
-from app.schemas.tender import TenderCreate, TenderResponse, TenderAttachmentResponse, TenderUpdate
-from app.services.tender_service import (
-    create_tender,
-    save_tender_attachments,
-    get_tender_by_id,
-    update_tender,
-    delete_tender,
-    list_tenders_filtered,
-)
-
-
-# Add these imports at the top of routes_auth.py
-from app.schemas.user import (
-    TenderVendorMappingCreate,
-    TenderVendorMappingUpdate,
-    TenderVendorMappingListResponse,
-    TenderWithVendorsResponse,
-    VendorWithTendersResponse,
-    BulkMappingCreate
-)
-
-
+from app.schemas.tender import TenderResponse, TenderUpdate
 from app.schemas.evaluation import (
-    EvaluationCriterionCreate,
-    EvaluationCriterionUpdate,
+    EvaluationCriterionCreate, EvaluationCriterionUpdate,
     EvaluationCriterionListResponse,
-    TenderEvaluationCreate,
-    TenderEvaluationUpdate,
-    BulkEvaluationCreate,
-    EvaluationSummaryResponse
+)
+
+# ---------- Services ----------
+from app.services.auth_service import (
+    register_user, login_user,    # auth
+    get_users, get_user_by_id, create_user, update_user, delete_user, toggle_user_status,  # users
+    get_roles_with_pagination, create_role, update_role, delete_role, toggle_role_status,  # roles
+    # Optional: implement check_duplicate in auth_service to support /check-duplicate
+)
+from app.services.tender_types_service import (
+    get_tender_types, bulk_import_tender_types, create_tender_type,
+    update_tender_type, delete_tender_type,
+)
+from app.services.tender_service import (
+    list_tenders_filtered, get_tender_by_id, update_tender, delete_tender,
 )
 from app.services.evaluation_service import (
-    initialize_default_criteria,
-    get_evaluation_criteria,
-    get_evaluation_criterion_by_id,
-    create_evaluation_criterion,
-    update_evaluation_criterion,
-    delete_evaluation_criterion,
-    toggle_criterion_status,
-    restore_default_criteria,
-    create_tender_evaluation,
-    create_bulk_evaluations,
-    get_evaluation_summary
+    get_evaluation_criteria,  # list
+    get_evaluation_criterion_by_id,  # get by id
+    create_evaluation_criterion, update_evaluation_criterion, delete_evaluation_criterion,
+    toggle_criterion_status, restore_default_criteria,
 )
-
-from app.schemas.ocr import BulkOCRResponse, OCRResultResponse, OCRStatusResponse, OCRProcessRequest, OCRCorrectTextRequest
-from app.services.ocr_service import ocr_service
 
 router = APIRouter()
 
-# --------------------------- AUTHENTICATION ---------------------------
+
+# ============================= AUTH =============================
 
 @router.post("/register", response_model=UserResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
-    """
-    Public endpoint: Register a new Viewer user.
-    """
+    """Register a user (Viewer by default)."""
     return register_user(db, user)
 
 
 @router.post("/login")
 def login(user: UserLogin, db: Session = Depends(get_db)):
-    """
-    Universal login: Works for Admins, Evaluators, and Viewers.
-    """
+    """Login for Admins, Evaluators, and Viewers."""
     return login_user(db, user)
 
 
-# --------------------------- USER MANAGEMENT (Admin Only) ---------------------------
+@router.post("/logout")
+def logout():
+    """Stateless placeholder; frontend clears token."""
+    return {"success": True, "message": "Logged out"}
+
+
+@router.get("/verify")
+def verify():
+    """Simple token verification endpoint for the frontend ping."""
+    return {"success": True}
+
+
+@router.post("/check-duplicate")
+def check_duplicate(field: str, value: str, db: Session = Depends(get_db)):
+    """
+    Optional helper used by the frontend to check duplicates.
+    Implement `check_duplicate` in auth_service if not present.
+    """
+    try:
+        from app.services.auth_service import check_duplicate as svc_check_dup  # local import if you add it
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="check_duplicate not implemented in backend"
+        )
+    return svc_check_dup(db, field, value)
+
+
+# ============================= USERS =============================
 
 @router.get("/users", response_model=UserListResponse)
 def list_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """
-    Admin endpoint: List all users with pagination.
-    """
+    """List users with pagination."""
     return get_users(db, skip=skip, limit=limit)
-
-
-@router.get("/users/{user_id}", response_model=UserResponse)
-def get_user(user_id: int, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Get a specific user's details.
-    """
-    return get_user_by_id(db, user_id)
 
 
 @router.post("/users", response_model=UserResponse)
 def create_new_user(user: UserCreate, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Create a new user (Admin/Evaluator/Viewer).
-    """
+    """Create a user (Admin/Evaluator/Viewer)."""
     return create_user(db, user)
 
 
 @router.put("/users/{user_id}", response_model=UserResponse)
 def update_existing_user(user_id: int, user: UserUpdate, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Update user details.
-    """
+    """Update a user's profile or role."""
     return update_user(db, user_id, user)
 
 
 @router.delete("/users/{user_id}")
 def delete_existing_user(user_id: int, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Soft delete a user (deactivate account).
-    """
+    """Soft delete / deactivate a user."""
     return delete_user(db, user_id)
 
 
 @router.put("/users/{user_id}/status")
 def update_user_status(user_id: int, status_data: UserStatusUpdate, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Activate or deactivate a user account.
-    """
+    """Toggle user active status."""
     return toggle_user_status(db, user_id, status_data)
 
 
-# --------------------------- ROLE MANAGEMENT ---------------------------
+# ============================= ROLES =============================
 
 @router.get("/roles", response_model=RoleListResponse)
 def list_roles(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """
-    Admin endpoint: Get all available roles with pagination.
-    """
+    """List roles with pagination."""
     return get_roles_with_pagination(db, skip=skip, limit=limit)
-
-@router.get("/roles/{role_id}", response_model=RoleResponseWithMessage)
-def get_role(role_id: int, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Get a specific role by ID.
-    """
-    return get_role_by_id(db, role_id)
 
 
 @router.post("/roles", response_model=RoleResponseWithMessage)
 def create_new_role(role: RoleCreate, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Create a new role.
-    """
+    """Create a role."""
     return create_role(db, role)
 
 
 @router.put("/roles/{role_id}", response_model=RoleResponseWithMessage)
 def update_existing_role(role_id: int, role: RoleUpdate, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Update role details.
-    """
+    """Update a role."""
     return update_role(db, role_id, role)
 
 
 @router.delete("/roles/{role_id}")
 def delete_existing_role(role_id: int, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Delete a role.
-    """
+    """Delete a role."""
     return delete_role(db, role_id)
 
 
 @router.put("/roles/{role_id}/status")
 def update_role_status(role_id: int, status_data: RoleStatusUpdate, db: Session = Depends(get_db)):
-    """
-    Admin endpoint: Activate or deactivate a role.
-    """
+    """Toggle role active status."""
     return toggle_role_status(db, role_id, status_data)
 
-# --------------------------- TENDER TYPES MANAGEMENT ---------------------------
 
-@router.post("/tender-types")
-def create_tender_type(
-    tender_type: TenderTypeCreate,
-    db: Session = Depends(get_db)
-):
-    from app.services.tender_types_service import create_tender_type
-    return create_tender_type(db, tender_type)
-
+# ========================== TENDER TYPES ==========================
 
 @router.get("/tender-types")
-def get_tender_types(
+def get_tender_types_endpoint(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    from app.services.tender_types_service import get_tender_types
+    """List tender types (paginated)."""
     return get_tender_types(db, skip, limit)
 
 
-@router.get("/tender-types/{code}")
-def get_tender_type_by_code(
-    code: str,
-    db: Session = Depends(get_db)
-):
-    from app.services.tender_types_service import get_tender_type_by_code
-    tender_type = get_tender_type_by_code(db, code)
-    if not tender_type:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender type not found")
-    return {
-        "success": True,
-        "message": "Tender type retrieved successfully",
-        "tender_type": tender_type
-    }
+@router.post("/tender-types/import")
+def import_tender_types(tender_types_data: dict, db: Session = Depends(get_db)):
+    """Bulk import tender types from JSON."""
+    return bulk_import_tender_types(db, tender_types_data)
+
+
+@router.post("/tender-types")
+def create_tender_type_endpoint(tender_type: TenderTypeCreate, db: Session = Depends(get_db)):
+    """Create a tender type."""
+    return create_tender_type(db, tender_type)
 
 
 @router.put("/tender-types/{code}")
-def update_tender_type(
-    code: str,
-    tender_type_update: TenderTypeUpdate,
-    db: Session = Depends(get_db)
-):
-    from app.services.tender_types_service import update_tender_type
+def update_tender_type_endpoint(code: str, tender_type_update: TenderTypeUpdate, db: Session = Depends(get_db)):
+    """Update a tender type by code."""
     result = update_tender_type(db, code, tender_type_update)
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender type not found")
@@ -264,426 +190,106 @@ def update_tender_type(
 
 
 @router.delete("/tender-types/{code}")
-def delete_tender_type(
-    code: str,
-    db: Session = Depends(get_db)
-):
-    from app.services.tender_types_service import delete_tender_type
+def delete_tender_type_endpoint(code: str, db: Session = Depends(get_db)):
+    """Delete a tender type by code."""
     result = delete_tender_type(db, code)
     if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender type not found")
     return result
 
 
-@router.post("/tender-types/import")
-def import_tender_types(
-    tender_types_data: dict,
-    db: Session = Depends(get_db)
-):
-    from app.services.tender_types_service import bulk_import_tender_types
-    return bulk_import_tender_types(db, tender_types_data)
-
-# --------------------------- TENDERS ---------------------------
-
-@router.post("/tenders", response_model=TenderResponse)
-async def create_tender_endpoint(
-    tender_type_code: str = Form(...),
-    tender_type_id: int | None = Form(None),
-    tender: str | None = Form(None),
-    description: str | None = Form(None),
-    status: str | None = Form("Draft"),
-    form_data_json: str = Form(...),
-    attachments: List[UploadFile] = File(default=[]),
-    attachment_keys: List[str] = Form(default=[]),
-    db: Session = Depends(get_db),
-):
-    import json
-    # Validate tender type exists early for clearer error
-    from app.models.user import TenderType
-    existing_type = db.query(TenderType).filter(TenderType.code == tender_type_code).first()
-    if not existing_type:
-        raise HTTPException(status_code=400, detail=f"Unknown tender_type_code: {tender_type_code}. Create or import this tender type first.")
-    
-    # If tender_type_id is provided, validate it matches the code
-    if tender_type_id and existing_type.id != tender_type_id:
-        raise HTTPException(status_code=400, detail=f"tender_type_id {tender_type_id} does not match tender_type_code {tender_type_code}")
-    
-    try:
-        form_data = json.loads(form_data_json)
-        if not isinstance(form_data, dict):
-            raise ValueError("form_data_json must be an object")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Invalid form_data_json: {e}")
-
-    # Create tender row
-    tender_payload = {
-        "tender_type_code": tender_type_code,
-        "tender_type_id": tender_type_id or existing_type.id,  # Use provided ID or get from existing_type
-        "tender": tender,
-        "description": description,
-        "form_data": form_data,
-        "status": status or "Draft",
-    }
-    try:
-        tender = create_tender(db, tender_payload)
-    except Exception as e:
-        try:
-            db.rollback()
-        except Exception:
-            pass
-        raise HTTPException(status_code=500, detail=f"Failed to create tender (DB): {str(e)}")
-
-    # Save attachments if any
-    files_payload = []
-    if attachments:
-        for idx, f in enumerate(attachments):
-            try:
-                f.file.seek(0)
-                content = f.file.read()
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Error reading attachment: {str(e)}")
-            field_key = None
-            if isinstance(attachment_keys, list) and idx < len(attachment_keys):
-                field_key = attachment_keys[idx]
-            files_payload.append({
-                "filename": f.filename,
-                "content_type": f.content_type,
-                "content": content,
-                "field_key": field_key,
-            })
-        try:
-            save_tender_attachments(db, tender.id, files_payload)
-        except Exception as e:
-            try:
-                db.rollback()
-            except Exception:
-                pass
-            raise HTTPException(status_code=500, detail=f"Failed to save attachments (DB): {str(e)}")
-
-    return tender
-
+# ============================= TENDERS =============================
 
 @router.get("/tenders", response_model=List[TenderResponse])
 def list_tenders(
     tender_type_code: str | None = Query(None),
     status: str | None = Query(None),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """List tenders with optional filtering by tender_type_code and status"""
+    """
+    List tenders with optional filters: tender_type_code, status.
+    """
     if tender_type_code or status:
         return list_tenders_filtered(db, tender_type_code, status)
-    else:
-        from app.models.user import Tender
-        tenders = db.query(Tender).order_by(Tender.id.desc()).all()
-        return tenders
+    # Fallback to latest first if no filters
+    from app.models.user import Tender  # local import to avoid circulars
+    return db.query(Tender).order_by(Tender.id.desc()).all()
 
 
 @router.get("/tenders/{tender_id}", response_model=TenderResponse)
 def get_tender(tender_id: int, db: Session = Depends(get_db)):
-    """Get a specific tender by ID"""
+    """Get tender by ID."""
     tender = get_tender_by_id(db, tender_id)
     if not tender:
-        raise HTTPException(status_code=404, detail="Tender not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender not found")
     return tender
 
 
 @router.put("/tenders/{tender_id}", response_model=TenderResponse)
-def update_tender_endpoint(
-    tender_id: int,
-    tender_update: TenderUpdate,
-    db: Session = Depends(get_db)
-):
-    """Update a tender"""
-    update_dict = tender_update.dict(exclude_unset=True)
+def update_tender_endpoint(tender_id: int, payload: TenderUpdate, db: Session = Depends(get_db)):
+    """Update a tender (partial)."""
+    update_dict = payload.dict(exclude_unset=True)
     tender = update_tender(db, tender_id, update_dict)
     if not tender:
-        raise HTTPException(status_code=404, detail="Tender not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender not found")
     return tender
 
 
 @router.delete("/tenders/{tender_id}")
 def delete_tender_endpoint(tender_id: int, db: Session = Depends(get_db)):
-    """Delete a tender and all its associated records"""
-    try:
-        success = delete_tender(db, tender_id)
-        if not success:
-            raise HTTPException(status_code=404, detail="Tender not found")
-        return {"success": True, "message": "Tender deleted successfully"}
-    except HTTPException:
-        raise
-    except Exception as e:
-        db.rollback()
-        raise HTTPException(status_code=500, detail=f"Failed to delete tender: {str(e)}")
+    """Delete a tender and its related records (as per service behavior)."""
+    success = delete_tender(db, tender_id)
+    if not success:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender not found")
+    return {"success": True, "message": "Tender deleted successfully"}
 
 
-
-@router.get("/tenders/{tender_id}/attachments", response_model=List[TenderAttachmentResponse])
-def get_tender_attachments(
-    tender_id: int,
-    db: Session = Depends(get_db),
-):
-    """Get all attachments for a specific tender"""
-    attachments = db.query(TenderAttachment).filter(
-        TenderAttachment.tender_id == tender_id
-    ).order_by(TenderAttachment.uploaded_at.desc()).all()
-    
-    if not attachments:
-        return []
-    return attachments
-
-
-@router.get("/tenders/{tender_id}/attachments/count")
-def get_tender_attachments_count(
-    tender_id: int,
-    db: Session = Depends(get_db),
-):
-    """Get count of attachments for a tender"""
-    count = db.query(TenderAttachment).filter(
-        TenderAttachment.tender_id == tender_id
-    ).count()
-    
-    return {"count": count}
-
-
-@router.get("/tenders-with-attachments", response_model=List[TenderResponse])
-def list_tenders_with_attachments(
-    tender_type_code: str | None = Query(None),
-    status: str | None = Query(None),
-    db: Session = Depends(get_db),
-):
-    """List tenders with attachment counts"""
-    from app.models.user import Tender
-    
-    # Base query
-    query = db.query(Tender)
-    
-    # Apply filters
-    if tender_type_code:
-        query = query.filter(Tender.tender_type_code == tender_type_code)
-    if status:
-        query = query.filter(Tender.status == status)
-    
-    tenders = query.order_by(Tender.id.desc()).all()
-    
-    # Add attachment count to each tender
-    for tender in tenders:
-        attachment_count = db.query(TenderAttachment).filter(
-            TenderAttachment.tender_id == tender.id
-        ).count()
-        tender.attachment_count = attachment_count
-        tender.has_attachments = attachment_count > 0
-    
-    return tenders
-
-# --------------------------- EVALUATION CRITERIA MANAGEMENT ---------------------------
+# ======================= EVALUATION CRITERIA =======================
 
 @router.get("/evaluation-criteria", response_model=EvaluationCriterionListResponse)
 def list_evaluation_criteria(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     active_only: bool = Query(True),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
-    """
-    Get all evaluation criteria with pagination
-    """
+    """List evaluation criteria."""
     return get_evaluation_criteria(db, skip=skip, limit=limit, active_only=active_only)
 
 
 @router.get("/evaluation-criteria/{criterion_id}")
 def get_evaluation_criterion(criterion_id: int, db: Session = Depends(get_db)):
-    """
-    Get a specific evaluation criterion by ID
-    """
+    """Get a single criterion by ID."""
     return get_evaluation_criterion_by_id(db, criterion_id)
 
 
 @router.post("/evaluation-criteria")
-def create_evaluation_criterion_endpoint(
-    criterion: EvaluationCriterionCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    Create a new evaluation criterion
-    """
+def create_evaluation_criterion_endpoint(criterion: EvaluationCriterionCreate, db: Session = Depends(get_db)):
+    """Create an evaluation criterion."""
     return create_evaluation_criterion(db, criterion)
 
 
 @router.put("/evaluation-criteria/{criterion_id}")
 def update_evaluation_criterion_endpoint(
-    criterion_id: int,
-    criterion: EvaluationCriterionUpdate,
-    db: Session = Depends(get_db)
+    criterion_id: int, criterion: EvaluationCriterionUpdate, db: Session = Depends(get_db)
 ):
-    """
-    Update an existing evaluation criterion
-    """
+    """Update an evaluation criterion."""
     return update_evaluation_criterion(db, criterion_id, criterion)
 
 
 @router.delete("/evaluation-criteria/{criterion_id}")
-def delete_evaluation_criterion_endpoint(
-    criterion_id: int,
-    db: Session = Depends(get_db)
-):
-    """
-    Delete an evaluation criterion
-    """
+def delete_evaluation_criterion_endpoint(criterion_id: int, db: Session = Depends(get_db)):
+    """Delete an evaluation criterion."""
     return delete_evaluation_criterion(db, criterion_id)
 
 
 @router.put("/evaluation-criteria/{criterion_id}/status")
-def update_criterion_status(
-    criterion_id: int,
-    status_data: dict,  # Using dict instead of creating new schema
-    db: Session = Depends(get_db)
-):
-    """
-    Activate or deactivate an evaluation criterion
-    """
-    return toggle_criterion_status(db, criterion_id, status_data.get("is_active", True))
+def update_criterion_status_endpoint(criterion_id: int, payload: dict, db: Session = Depends(get_db)):
+    """Toggle criterion active status."""
+    return toggle_criterion_status(db, criterion_id, payload.get("is_active", True))
 
 
 @router.post("/evaluation-criteria/restore-defaults")
 def restore_default_criteria_endpoint(db: Session = Depends(get_db)):
-    """
-    Restore all default criteria and remove custom ones
-    """
+    """Restore default criteria (removes custom ones)."""
     return restore_default_criteria(db)
-
-
-# --------------------------- TENDER EVALUATIONS ---------------------------
-
-@router.post("/tender-evaluations")
-def create_tender_evaluation_endpoint(
-    evaluation: TenderEvaluationCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    Create a new tender evaluation
-    """
-    return create_tender_evaluation(db, evaluation)
-
-
-@router.post("/tender-evaluations/bulk")
-def create_bulk_evaluations_endpoint(
-    bulk_data: BulkEvaluationCreate,
-    db: Session = Depends(get_db)
-):
-    """
-    Create multiple evaluations for a tender-vendor combination
-    """
-    return create_bulk_evaluations(db, bulk_data)
-
-
-@router.get("/tender-evaluations/summary")
-def get_evaluation_summary_endpoint(
-    tender_id: int = Query(..., ge=1),
-    vendor_id: int = Query(..., ge=1),
-    db: Session = Depends(get_db)
-):
-    """
-    Get evaluation summary for a tender-vendor combination
-    """
-    return get_evaluation_summary(db, tender_id, vendor_id)
-
-# --------------------------- OCR  ---------------------------
-
-@router.post("/documents/{document_id}/ocr-process", response_model=OCRStatusResponse)
-async def process_document_ocr(
-    document_id: int,
-    db: Session = Depends(get_db),
-):
-    """Process OCR for a single document"""
-    try:
-        result = await ocr_service.process_document_ocr(db, document_id)
-        return OCRStatusResponse(
-            document_id=document_id,
-            status=result['status']
-        )
-
-    except ValueError as e:
-        print(f"[OCR ERROR - ValueError] {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=404, detail=str(e))
-
-    except Exception as e:
-        print(f"[OCR ERROR - Exception] {e}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"OCR processing failed: {str(e)}")
-    
-@router.post("/documents/bulk-ocr-process", response_model=BulkOCRResponse)
-async def bulk_process_ocr(
-    request: OCRProcessRequest,
-    db: Session = Depends(get_db),
-):
-    """Bulk OCR processing for multiple documents"""
-    try:
-        result = await ocr_service.bulk_process_ocr(db, request.document_ids)
-        return BulkOCRResponse(**result)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Bulk OCR processing failed: {str(e)}")
-
-@router.get("/documents/{document_id}/ocr-status", response_model=OCRStatusResponse)
-async def get_ocr_status(
-    document_id: int,
-    db: Session = Depends(get_db),
-):
-    """Get OCR status for a document"""
-    status_info = ocr_service.get_ocr_status(db, document_id)
-    return OCRStatusResponse(
-        document_id=document_id,
-        **status_info
-    )
-
-@router.put("/documents/{document_id}/correct-text")
-async def correct_ocr_text(
-    document_id: int,
-    request: OCRCorrectTextRequest,
-    db: Session = Depends(get_db),
-):
-    """Manual OCR text correction"""
-    success = ocr_service.correct_ocr_text(db, document_id, request.corrected_text)
-    if not success:
-        raise HTTPException(status_code=404, detail="Document not found")
-    
-    return {"success": True, "message": "OCR text corrected successfully"}
-
-@router.get("/documents/{document_id}/ocr-result", response_model=OCRResultResponse)
-async def get_ocr_result(
-    document_id: int,
-    db: Session = Depends(get_db),
-):
-    """Get full OCR result details"""
-    ocr_result = db.query(OCRResult).filter(OCRResult.document_id == document_id).first()
-    if not ocr_result:
-        raise HTTPException(status_code=404, detail="OCR result not found")
-    
-    return ocr_result
-
-@router.get("/vendors/{vendor_id}/ocr-results")
-async def get_vendor_ocr_results(
-    vendor_id: int,
-    db: Session = Depends(get_db),
-):
-    """Get all OCR results for a vendor's documents"""
-    try:
-        # Get vendor documents
-        vendor_docs = db.query(VendorDocument).filter(VendorDocument.vendor_id == vendor_id).all()
-        doc_ids = [doc.id for doc in vendor_docs]
-        
-        # Get OCR results for these documents
-        ocr_results = db.query(OCRResult).filter(OCRResult.document_id.in_(doc_ids)).all()
-        
-        # Convert to Pydantic models for proper serialization
-        serialized_ocr_results = [OCRResultResponse.model_validate(result) for result in ocr_results]
-        
-        return {
-            "vendor_id": vendor_id,
-            "total_documents": len(vendor_docs),
-            "ocr_results": serialized_ocr_results
-        }
-        
-    except Exception as e:
-        logger.logger.error(f"Error getting vendor OCR results: {e}")
-        raise HTTPException(status_code=500, detail="Failed to get vendor OCR results")

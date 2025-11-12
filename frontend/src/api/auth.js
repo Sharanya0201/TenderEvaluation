@@ -108,10 +108,6 @@ export const getTenderTypes = async () => {
   return apiGet('/api/v1/auth/tender-types');
 };
 
-// Get tender type by code
-//export const getTenderTypeByCode = async (code) => {
-//  return apiGet(`/api/v1/auth/tender-types/${code}`);
-//};
 
 // Import tender types from JSON data
 export const importTenderTypes = async (tenderTypesData) => {
@@ -212,9 +208,6 @@ export const getRoles = async (params = {}) => {
   return apiGet(endpoint);
 };
 
-//export const getRoleById = async (roleId) => {
-//  return apiGet(`/api/v1/auth/roles/${roleId}`);
-//};
 
 export const createRole = async (roleData) => {
   const formattedData = {
