@@ -1,0 +1,313 @@
+.uf-user-form-container {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+  border: 1px solid #e8f4ff;
+}
+
+.uf-user-form-header {
+  text-align: center;
+  margin-bottom: 30px;
+  padding: 0 10px;
+}
+
+.uf-user-form-header h2 {
+  color: #2c3e50;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: 0.5px;
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.uf-user-form-header p {
+  color: #718096;
+  font-size: 14px;
+  margin: 8px 0 0 0;
+}
+
+.uf-user-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.uf-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.uf-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.uf-form-group label {
+  color: #2c3e50;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.uf-optional {
+  font-weight: normal;
+  color: #718096;
+  font-size: 12px;
+}
+
+.uf-form-group input,
+.uf-form-group select {
+  padding: 14px 16px;
+  border: 2px solid #e8f4ff;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background-color: #f8fbff;
+  width: 100%;
+  box-sizing: border-box;
+  color: #2c3e50;
+  font-family: inherit;
+}
+
+.uf-form-group select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23666' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 12px;
+  padding-right: 40px;
+}
+
+.uf-form-group input:focus,
+.uf-form-group select:focus {
+  outline: none;
+  border-color: #0c6dc5;
+  background-color: white;
+  box-shadow: 0 0 0 4px rgba(12, 109, 197, 0.15);
+  color: #2c3e50;
+}
+
+.uf-form-group input:hover,
+.uf-form-group select:hover {
+  border-color: #0c6dc5;
+  background-color: #f0f8ff;
+}
+
+.uf-form-group input::placeholder {
+  color: #a0aec0;
+}
+
+/* Error states */
+.uf-form-group input.uf-error,
+.uf-form-group select.uf-error {
+  border-color: #ff6b6b;
+  background-color: #fff5f5;
+}
+
+.uf-form-group input.uf-error:focus,
+.uf-form-group select.uf-error:focus {
+  border-color: #ff6b6b;
+  box-shadow: 0 0 0 4px rgba(255, 107, 107, 0.15);
+}
+
+.uf-error-message {
+  color: #ff6b6b;
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.uf-error-message::before {
+  content: "⚠";
+  font-size: 11px;
+}
+
+/* Password input with eye icon */
+.uf-password-input-container {
+  position: relative;
+  width: 100%;
+}
+
+.uf-password-input {
+  padding-right: 50px !important;
+}
+
+.uf-password-toggle {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  border: none;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+  color: white;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.uf-password-toggle:hover {
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 4px 12px rgba(12, 37, 97, 0.3);
+}
+
+.uf-password-toggle:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+/* Form actions */
+.uf-form-actions {
+  display: flex;
+  gap: 15px;
+  justify-content: flex-end;
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 1px solid #e8f4ff;
+}
+
+.uf-cancel-button {
+  background: #f8f9fa;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 120px;
+}
+
+.uf-cancel-button:hover:not(:disabled) {
+  background: #e2e8f0;
+  border-color: #cbd5e0;
+  transform: translateY(-2px);
+}
+
+.uf-cancel-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.uf-submit-button {
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 140px;
+  position: relative;
+  overflow: hidden;
+}
+
+.uf-submit-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(12, 37, 97, 0.4);
+}
+
+.uf-submit-button:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.uf-submit-button:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.uf-submit-button.uf-submitting {
+  cursor: wait;
+}
+
+.uf-submit-button.uf-submitting::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin: -10px 0 0 -10px;
+  border: 2px solid transparent;
+  border-top: 2px solid white;
+  border-radius: 50%;
+  animation: uf-spin 1s linear infinite;
+}
+
+@keyframes uf-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .uf-user-form-container {
+    padding: 25px 20px;
+    margin: 15px;
+    max-width: 100%;
+    border-radius: 14px;
+  }
+  
+  .uf-form-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .uf-form-actions {
+    flex-direction: column;
+  }
+  
+  .uf-cancel-button,
+  .uf-submit-button {
+    min-width: auto;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .uf-user-form-container {
+    padding: 20px 15px;
+  }
+  
+  .uf-user-form-header h2 {
+    font-size: 20px;
+  }
+  
+  .uf-form-group input,
+  .uf-form-group select {
+    padding: 12px 14px;
+  }
+  
+  .uf-password-input {
+    padding-right: 45px !important;
+  }
+  
+  .uf-password-toggle {
+    right: 12px;
+    width: 32px;
+    height: 32px;
+  }
+}

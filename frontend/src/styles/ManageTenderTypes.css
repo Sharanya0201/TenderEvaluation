@@ -1,0 +1,666 @@
+/* ManageTenderTypes.css - Unique styles with mtt- prefix */
+
+.mtt-container {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f7fa;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+.mtt-main-content {
+  flex: 1;
+  padding: 2rem;
+  background-color: #f5f7fa;
+  color: #333;
+  min-height: 100vh;
+  transition: all 0.3s ease;
+}
+
+.mtt-main-content.mtt-collapsed {
+  margin-left: 80px;
+  width: calc(100vw - 80px);
+}
+
+.mtt-main-content.mtt-expanded {
+  margin-left: 280px;
+  width: calc(100vw - 280px);
+}
+
+.mtt-form-container {
+  background: white;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  border: 1px solid #e8f4ff;
+}
+
+.mtt-header {
+  text-align: left;
+  margin-bottom: 30px;
+  padding: 0 10px;
+  position: relative;
+}
+
+.mtt-header-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.mtt-import-btn {
+  background: linear-gradient(145deg, #3498db 0%, #2980b9 100%);
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.3);
+}
+
+.mtt-import-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(52, 152, 219, 0.4);
+}
+
+.mtt-import-btn:active {
+  transform: translateY(0);
+}
+
+.mtt-header h2 {
+  color: #2c3e50;
+  font-size: 24px;
+  font-weight: 700;
+  margin: 0;
+  line-height: 1.3;
+  letter-spacing: 0.5px;
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.mtt-subtitle {
+  color: #718096;
+  font-size: 1rem;
+  margin: 0.5rem 0 0 0;
+}
+
+/* Add Type Section */
+.mtt-add-type-section {
+  background: #f8fbff;
+  padding: 2.5rem;
+  border-radius: 12px;
+  border: 2px solid #e8f4ff;
+  margin-bottom: 3rem;
+  transition: all 0.3s ease;
+}
+
+.mtt-add-type-section:hover {
+  border-color: #0c6dc5;
+  box-shadow: 0 4px 12px rgba(12, 109, 197, 0.1);
+}
+
+.mtt-add-type-section h3 {
+  color: #2c3e50;
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.mtt-type-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Form Grid */
+.mtt-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.mtt-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mtt-form-group label {
+  color: #2c3e50;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.mtt-form-group input,
+.mtt-form-group textarea {
+  padding: 14px 16px;
+  border: 2px solid #e8f4ff;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background-color: #f8fbff;
+  width: 100%;
+  box-sizing: border-box;
+  color: #2c3e50;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.mtt-form-group input:focus,
+.mtt-form-group textarea:focus {
+  outline: none;
+  border-color: #0c6dc5;
+  background-color: white;
+  box-shadow: 0 0 0 4px rgba(12, 109, 197, 0.15);
+  color: #2c3e50;
+}
+
+.mtt-form-group input:hover,
+.mtt-form-group textarea:hover {
+  border-color: #0c6dc5;
+  background-color: #f0f8ff;
+}
+
+.mtt-form-group input::placeholder,
+.mtt-form-group textarea::placeholder {
+  color: #a0aec0;
+}
+
+/* Types List Section */
+.mtt-types-list-section h3 {
+  color: #2c3e50;
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.mtt-types-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 2rem;
+}
+
+.mtt-type-card {
+  background: white;
+  border: 2px solid #e8f4ff;
+  border-radius: 12px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.mtt-type-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+}
+
+.mtt-type-card:hover {
+  border-color: #0c6dc5;
+  transform: translateY(-4px);
+  box-shadow: 0 8px 25px rgba(12, 109, 197, 0.15);
+}
+
+.mtt-type-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.mtt-type-icon {
+  font-size: 2.5rem;
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  flex-shrink: 0;
+}
+
+.mtt-type-info {
+  flex: 1;
+}
+
+.mtt-type-info h4 {
+  margin: 0 0 0.5rem 0;
+  color: #2c3e50;
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.mtt-type-code {
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.mtt-type-description {
+  color: #718096;
+  margin: 0 0 1.5rem 0;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.mtt-type-config {
+  background: #f8fbff;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #e8f4ff;
+  margin-bottom: 1.5rem;
+}
+
+.mtt-type-config small {
+  color: #0c6dc5;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.mtt-type-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.mtt-edit-btn {
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+  position: relative;
+  z-index: 1;
+}
+
+.mtt-edit-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(12, 37, 97, 0.3);
+  color: white !important;
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%) !important;
+}
+
+.mtt-delete-btn {
+  background: #f8f9fa;
+  color: #e53e3e;
+  border: 2px solid #fed7d7;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  flex: 1;
+}
+
+.mtt-delete-btn:hover {
+  background: #e53e3e;
+  color: white;
+  border-color: #e53e3e;
+  transform: translateY(-2px);
+}
+
+/* Submit Button */
+.mtt-submit-button {
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  align-self: flex-start;
+  margin-top: 1rem;
+}
+
+.mtt-submit-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(12, 37, 97, 0.4);
+}
+
+.mtt-submit-button.mtt-disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.mtt-submit-button.mtt-disabled:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Section Header */
+.mtt-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.mtt-type-count {
+  background: #e8f4ff;
+  color: #0c6dc5;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+/* Form Actions */
+.mtt-form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2.5rem;
+  align-items: flex-start;
+}
+
+.mtt-cancel-button {
+  background: #f8f9fa;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1.2rem;
+}
+
+.mtt-cancel-button:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e0;
+  transform: translateY(-1px);
+}
+
+/* Field Hints */
+.mtt-field-hint {
+  color: #718096;
+  font-size: 0.8rem;
+  margin-top: 4px;
+  display: block;
+}
+
+/* Edit Badge */
+.mtt-edit-badge {
+  background: #0c6dc5;
+  color: white;
+  padding: 0.3rem 0.8rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Editing State */
+.mtt-type-card.mtt-editing {
+  border-color: #0c6dc5;
+  background: #f0f7ff;
+}
+
+/* Empty State */
+.mtt-empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  background: #f8fbff;
+  border: 2px dashed #e8f4ff;
+  border-radius: 12px;
+  color: #718096;
+}
+
+.mtt-empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.mtt-empty-state h4 {
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+/* Disabled States */
+button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Config Upload Section */
+.mtt-config-upload-section {
+  background: #f0f7ff;
+  padding: 1.5rem;
+  border-radius: 8px;
+  border: 2px dashed #0c6dc5;
+  margin: 1.5rem 0;
+}
+
+.mtt-config-upload-section h4 {
+  color: #2c3e50;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+}
+
+.mtt-upload-actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.mtt-download-template-btn {
+  background: #0c6dc5;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mtt-download-template-btn:hover {
+  background: #0a5aa8;
+  transform: translateY(-2px);
+}
+
+.mtt-file-upload {
+  position: relative;
+}
+
+.mtt-file-input {
+  display: none;
+}
+
+.mtt-upload-label {
+  background: #f8f9fa;
+  color: #4a5568;
+  border: 2px solid #e2e8f0;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: inline-block;
+}
+
+.mtt-upload-label:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e0;
+}
+
+.mtt-upload-success {
+  margin-top: 1rem;
+  padding: 0.8rem;
+  background: #f0fff4;
+  border: 1px solid #9ae6b4;
+  border-radius: 6px;
+  color: #2d3748;
+  font-weight: 600;
+}
+
+/* Existing Configuration Styles */
+.mtt-existing-config {
+  background: #fff8e1;
+  border: 1px solid #ffd54f;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mtt-existing-config h5 {
+  color: #2c3e50;
+  margin: 0 0 0.8rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.mtt-config-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.mtt-config-info span {
+  color: #2d3748;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.mtt-clear-config-btn {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mtt-clear-config-btn:hover {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mtt-form-container {
+    padding: 25px 20px;
+    margin: 15px;
+    max-width: 100%;
+    border-radius: 14px;
+  }
+  
+  .mtt-form-row {
+    grid-template-columns: 1fr;
+    gap: 15px;
+  }
+  
+  .mtt-types-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .mtt-type-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .mtt-type-actions {
+    flex-direction: column;
+  }
+  
+  .mtt-add-type-section {
+    padding: 2rem;
+  }
+  
+  .mtt-upload-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .mtt-download-template-btn,
+  .mtt-upload-label {
+    text-align: center;
+  }
+  
+  .mtt-form-actions {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .mtt-cancel-button {
+    margin-top: 0;
+    order: 2;
+  }
+  
+  .mtt-submit-button {
+    order: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .mtt-form-container {
+    padding: 20px 15px;
+  }
+  
+  .mtt-header h2 {
+    font-size: 20px;
+  }
+  
+  .mtt-form-group input,
+  .mtt-form-group textarea {
+    padding: 12px 14px;
+  }
+  
+  .mtt-type-card {
+    padding: 1.5rem;
+  }
+  
+  .mtt-form-actions {
+    margin-top: 1.5rem;
+  }
+}

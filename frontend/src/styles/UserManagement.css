@@ -1,0 +1,742 @@
+.ump-user-management-page {
+  padding: 2rem;
+  background: #f8f9fa;
+  min-height: 100vh;
+}
+
+.ump-user-management-header {
+  margin-bottom: 2rem;
+}
+
+.ump-user-management-header h1 {
+  color: #2c3e50;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.ump-user-management-header p {
+  color: #718096;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.ump-user-management-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.ump-search-box {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.ump-search-input {
+  width: 100%;
+  padding: 12px 45px 12px 16px;
+  border: 2px solid #e8f4ff;
+  border-radius: 10px;
+  font-size: 15px;
+  background-color: white;
+  transition: all 0.3s ease;
+  color: #2c3e50;
+}
+
+.ump-search-input:focus {
+  outline: none;
+  border-color: #0c6dc5;
+  box-shadow: 0 0 0 4px rgba(12, 109, 197, 0.15);
+}
+
+.ump-search-icon {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #a0aec0;
+}
+
+.ump-add-user-button {
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.ump-add-user-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(12, 37, 97, 0.3);
+}
+
+.ump-users-table-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.ump-loading-state,
+.ump-empty-state {
+  padding: 3rem;
+  text-align: center;
+  color: #718096;
+  font-size: 1.1rem;
+}
+
+.ump-users-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ump-users-table th {
+  background: linear-gradient(145deg, #0c6dc5 0%, #0c6dc5 50%, #0c6dc5 100%);
+  color: white;
+  padding: 1rem;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ump-users-table td {
+  padding: 1rem;
+  border-bottom: 1px solid #e8f4ff;
+  color: #2c3e50;
+}
+
+.ump-users-table tr:hover {
+  background-color: #f8fbff;
+}
+
+.ump-username-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 600;
+}
+
+.ump-user-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(145deg, #0c6dc5 0%, #0c6dc5 50%, #0c6dc5 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.ump-role-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.ump-role-admin {
+  background: #fff5f5;
+  color: #c53030;
+}
+
+.ump-role-user {
+  background: #f0fff4;
+  color: #276749;
+}
+
+.ump-role-viewer {
+  background: #faf5ff;
+  color: #6b46c1;
+}
+
+.ump-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.ump-status-badge.active {
+  background: #f0fff4;
+  color: #276749;
+}
+
+.ump-status-badge.inactive {
+  background: #fff5f5;
+  color: #c53030;
+}
+
+.ump-action-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.ump-action-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 16px;
+}
+
+.ump-edit-btn:hover {
+  background: #ebf8ff;
+  transform: scale(1.1);
+}
+
+.ump-status-btn:hover {
+  background: #f0fff4;
+  transform: scale(1.1);
+}
+
+.ump-delete-btn:hover {
+  background: #fff5f5;
+  transform: scale(1.1);
+}
+
+.ump-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 2rem;
+}
+
+.ump-pagination-btn {
+  padding: 10px 16px;
+  border: 2px solid #e8f4ff;
+  background: white;
+  color: #4a5568;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.ump-pagination-btn:hover:not(:disabled) {
+  border-color: #0c6dc5;
+  color: #0c6dc5;
+}
+
+.ump-pagination-btn.active {
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  color: white;
+  border-color: transparent;
+}
+
+.ump-pagination-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Updated Modal Styles for UserManagement.css */
+
+/* Modal Backdrop - Only covers main content */
+.ump-modal-backdrop {
+  background: rgba(0, 0, 0, 0.5);
+  /* No backdrop-filter blur */
+}
+
+/* Modal Container */
+.ump-modal-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  padding: 2rem;
+}
+
+/* Modal Content */
+.ump-modal-content {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  max-width: 700px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  animation: ump-modalSlideIn 0.3s ease-out;
+}
+
+/* Animation for modal */
+@keyframes ump-modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Ensure the main content elements have proper z-index */
+.ump-user-management-actions,
+.ump-users-table-container {
+  position: relative;
+  z-index: 1;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .ump-user-management-page {
+    padding: 1rem;
+  }
+  
+  .ump-users-table-container {
+    overflow-x: auto;
+  }
+  
+  .ump-users-table {
+    min-width: 800px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ump-user-management-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .ump-search-box {
+    max-width: none;
+  }
+  
+.ump-user-management-header h1 {
+  color: #2c3e50;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+  
+  .ump-users-table th,
+  .ump-users-table td {
+    padding: 0.75rem 0.5rem;
+    font-size: 14px;
+  }
+  
+  .ump-action-buttons {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .ump-action-btn {
+    padding: 6px;
+    font-size: 14px;
+  }
+  
+  .ump-modal-container {
+    padding: 1rem;
+  }
+  
+  .ump-modal-content {
+    max-height: 95vh;
+  }
+}
+
+@media (max-width: 480px) {
+  .ump-user-management-page {
+    padding: 0.5rem;
+  }
+  
+  .ump-user-management-header h1 {
+    font-size: 1.75rem;
+  }
+  
+  .ump-pagination {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  
+  .ump-pagination-btn {
+    padding: 8px 12px;
+    font-size: 14px;
+  }
+  
+  .ump-modal-container {
+    padding: 0.5rem;
+  }
+}
+
+
+/* Export buttons container */
+.ump-export-buttons-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+/* Export buttons */
+.ump-export-button {
+  background: linear-gradient(145deg, #27ae60 0%, #2ecc71 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.ump-export-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(39, 174, 96, 0.3);
+}
+
+.ump-export-button:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.ump-export-button.ump-export-pdf {
+  background: linear-gradient(145deg, #e74c3c 0%, #c0392b 100%);
+}
+
+.ump-export-button.ump-export-pdf:hover:not(:disabled) {
+  box-shadow: 0 8px 20px rgba(231, 76, 60, 0.3);
+}
+
+/* Table info */
+.ump-table-info {
+  padding: 1rem 1.5rem;
+  background: #f8f9fa;
+  border-bottom: 1px solid #e8f4ff;
+  color: #718096;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Update user-management-actions for better spacing */
+.ump-user-management-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+/* Responsive design for export buttons */
+@media (max-width: 1024px) {
+  .ump-export-buttons-container {
+    order: 3;
+    width: 100%;
+    justify-content: flex-end;
+    margin-top: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .ump-user-management-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .ump-search-box {
+    max-width: none;
+    order: 1;
+  }
+  
+  .ump-export-buttons-container {
+    order: 2;
+    width: 100%;
+    justify-content: space-between;
+    margin-top: 1rem;
+  }
+  
+  .ump-export-button {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .ump-add-user-button {
+    order: 3;
+    margin-top: 1rem;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .ump-export-buttons-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .ump-export-button {
+    width: 100%;
+  }
+}
+
+/* Column Filter Styles */
+.ump-column-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ump-column-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ump-column-filter-input {
+  width: 100%;
+  padding: 6px 25px 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2c3e50;
+  transition: all 0.2s ease;
+}
+
+.ump-column-filter-input:focus {
+  outline: none;
+  border-color: #0c6dc5;
+  box-shadow: 0 0 0 2px rgba(12, 109, 197, 0.1);
+}
+
+.ump-column-filter-input::placeholder {
+  color: #a0aec0;
+  font-size: 10px;
+}
+
+.ump-clear-filter-btn {
+  position: absolute;
+  right: 4px;
+  background: none;
+  border: none;
+  color: #718096;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 2px;
+  font-size: 10px;
+  transition: all 0.2s ease;
+}
+
+.ump-clear-filter-btn:hover {
+  color: #e53e3e;
+  background: rgba(229, 62, 62, 0.1);
+}
+
+/* Status Filter Styles */
+.ump-status-filter {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ump-status-filter-select {
+  width: 100%;
+  padding: 6px 25px 6px 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 4px;
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #2c3e50;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 4 5'><path fill='%23666' d='M2 0L0 2h4zm0 5L0 3h4z'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 6px center;
+  background-size: 8px;
+}
+
+.ump-status-filter-select:focus {
+  outline: none;
+  border-color: #0c6dc5;
+}
+
+/* Clear Filters Button */
+.ump-clear-filters-button {
+  background: linear-gradient(145deg, #f56565 0%, #e53e3e 100%);
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.ump-clear-filters-button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(229, 62, 62, 0.3);
+}
+
+.ump-clear-filters-inline {
+  background: #0c6dc5;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.ump-clear-filters-inline:hover {
+  background: #0a5aa8;
+  transform: translateY(-1px);
+}
+
+/* Filter Indicator */
+.ump-filter-indicator {
+  color: #718096;
+  font-size: 12px;
+  margin-left: 10px;
+  font-weight: normal;
+}
+
+/* Table header adjustments for filters */
+.ump-users-table th {
+  padding: 8px 1rem;
+  vertical-align: top;
+}
+
+.ump-users-table thead tr:first-child th {
+  padding-top: 12px;
+  padding-bottom: 12px;
+}
+
+/* Active filter highlight */
+.ump-column-filter-input:not(:placeholder-shown) {
+  border-color: #0c6dc5;
+  background: #f0f8ff;
+}
+
+.ump-status-filter-select:not([value=""]) {
+  border-color: #0c6dc5;
+  background: #f0f8ff;
+}
+
+/* Responsive design for column filters */
+@media (max-width: 1024px) {
+  .ump-column-filter-input,
+  .ump-status-filter-select {
+    font-size: 10px;
+    padding: 4px 20px 4px 6px;
+  }
+  
+  .ump-clear-filter-btn {
+    right: 2px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 768px) {
+  .ump-users-table-container {
+    overflow-x: auto;
+  }
+  
+  .ump-users-table {
+    min-width: 900px;
+  }
+  
+  .ump-column-header {
+    min-width: 120px;
+  }
+  
+  .ump-clear-filters-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+  
+  .ump-empty-table-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .ump-export-buttons-container {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .ump-clear-filters-button {
+    order: -1;
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .ump-column-filter-input,
+  .ump-status-filter-select {
+    font-size: 9px;
+  }
+  
+  .ump-empty-state {
+    font-size: 1rem;
+    padding: 2rem;
+  }
+}
+
+/* Empty state styles */
+.ump-empty-state-cell {
+  text-align: center;
+  padding: 3rem !important;
+}
+
+.ump-empty-state {
+  color: #718096;
+  font-size: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ump-empty-state p {
+  margin: 0;
+}
+
+.ump-empty-table-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.ump-empty-row:hover {
+  background-color: transparent !important;
+}

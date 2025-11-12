@@ -1,0 +1,8 @@
+{
+    "GEM": {
+      "name": "GEM Bid",
+      "config": "gemFormConfig.json",
+      "icon": "",
+      "description": "Government e-Marketplace Bids"
+    }
+  }

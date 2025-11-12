@@ -1,0 +1,324 @@
+[
+  {
+    "group": "Bid Details",
+    "name": "Bid End Date/Time",
+    "type": "date time",
+    "inputType": "calender",
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Bid Opening Date/Time ",
+    "type": "date time",
+    "inputType": "calender",
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Bid Offer Validity (From End Date) ",
+    "type": "int",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Ministry/State Name",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Department Name",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Organisation Name ",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Office Name ",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Item Category",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Similar Category ",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Contract Period ",
+    "type": "int",
+    "inputType": "combobox",
+    "options": []
+  },
+  {
+    "group": "Bid Details",
+    "name": "Years of Past Experience Required for same/similar service",
+    "type": "int",
+    "inputType": "combobox",
+    "options": []
+  },
+  {
+    "group": "Bid Details",
+    "name": "Past Experience of Similar Services required",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "MSE Exemption for Years Of Experience and Turnover",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Startup Exemption for Years Of Experience and Turnover",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Document required from seller",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Do you want to show documents uploaded by bidders to all bidders participated in bid?",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Minimum number of bids required to disable automatic bid extension",
+    "type": "int",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Number of days for which Bid would be auto—extended",
+    "type": "int",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Bid to RA enabled",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Type of Bid ",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Time allowed for Technical Clarifications during technical evaluation",
+    "type": "int",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Estimated Bid Value",
+    "type": "int",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Evaluation Method ",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Arbitration Clause",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Bid Details",
+    "name": "Mediation Clause ",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "EMD Detail",
+    "name": "Advisory Bank ",
+    "type": "string",
+    "inputType": "combobox",
+    "options": []
+  },
+  {
+    "group": "EMD Detail",
+    "name": "EMD Amount",
+    "type": "int",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "ePBG Detail",
+    "name": "Advisory Bank ",
+    "type": "string",
+    "inputType": "combobox",
+    "options": []
+  },
+  {
+    "group": "ePBG Detail",
+    "name": "ePBG Percentage(%) ",
+    "type": "float",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "ePBG Detail",
+    "name": "Duration of ePBG required (Months). ",
+    "type": "int",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "MII Compliance",
+    "name": "MII Compliance",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "MSE Purchase Preference",
+    "name": "MSE Purchase Preference",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Additional Qualification/Data Required",
+    "name": "Scope of Work",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Additional Qualification/Data Required",
+    "name": "Payment Terms",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Additional Qualification/Data Required",
+    "name": "GEM Availability Report ( GAR)",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Additional Qualification/Data Required",
+    "name": "Undertaking of Competent Authority is mandatory to create Custom Bid for Services. Please download standard format document and upload",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Additional Qualification/Data Required",
+    "name": "Custom Bid For Services",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Technical Specifications",
+    "name": "Description /Nomenclature of Service Proposed for procurement using custom bid functionality",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Technical Specifications",
+    "name": "Regulatory/ Statutory Compliance of Service",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Technical Specifications",
+    "name": "Compliance of Service to SOW, STC, SLA etc",
+    "type": "bool",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Technical Specifications",
+    "name": "Addon(s)",
+    "type": "string",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Additional Specification Documents",
+    "name": "Attachment",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Consignees/Reporting Officer and Quantity",
+    "name": "Consignees/Reporting Officer ",
+    "type": "table",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Buyer Added Bid Specific Terms and Conditions",
+    "name": "Buyer Added Bid Specific ATC",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Buyer Added Bid Specific Terms and Conditions",
+    "name": "Buyer Added Bid Specific Scope Of Work(SOW)",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  },
+  {
+    "group": "Buyer Added Bid Specific Terms and Conditions",
+    "name": "Certificates",
+    "type": "file attachment",
+    "inputType": null,
+    "options": null
+  }
+]
