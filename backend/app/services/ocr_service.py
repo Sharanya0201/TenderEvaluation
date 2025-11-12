@@ -17,7 +17,7 @@ from docx import Document as DocxDocument
 from pptx import Presentation
 from openpyxl import load_workbook
 
-from app.models.user import VendorDocument, OCRResult
+from app.models.user import OCRResult
 
 logger = logging.getLogger(__name__)
 

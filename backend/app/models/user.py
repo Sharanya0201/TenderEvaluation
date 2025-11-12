@@ -39,108 +39,6 @@ class User(Base):
     role = relationship("Role", back_populates="users")
 
 
-class Vendor(Base):
-    __tablename__ = "vendors"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    # --- Basic Info ---
-    vendor_name = Column(String(255), nullable=False)
-    org_type = Column(String(100), nullable=False)
-    incorp_date = Column(Date, nullable=True)
-    nature_of_business = Column(String(255))
-
-    # --- Registered Address ---
-    reg_address_line1 = Column(String(255), nullable=False)
-    reg_address_line2 = Column(String(255))
-    reg_address_city = Column(String(100), nullable=False)
-    reg_address_state = Column(String(100), nullable=False)
-    reg_address_pincode = Column(String(20), nullable=False)
-
-    # --- Correspondence Address ---
-    corr_address_line1 = Column(String(255), nullable=False)
-    corr_address_line2 = Column(String(255))
-    corr_address_city = Column(String(100), nullable=False)
-    corr_address_state = Column(String(100), nullable=False)
-    corr_address_pincode = Column(String(20), nullable=False)
-
-    same_as_registered = Column(Boolean, default=False)
-
-    # --- Contact Person ---
-    contact_person_name = Column(String(255), nullable=False)
-    contact_person_designation = Column(String(100), nullable=False)
-    contact_person_mobile = Column(String(20), nullable=False)
-    contact_person_email = Column(String(100), nullable=False)
-
-    # --- Company Details ---
-    telephone_number = Column(String(50))
-    fax_number = Column(String(50))
-    email_address = Column(String(100))
-    website = Column(String(150))
-    company_representative_name = Column(String(255))
-    company_representative_title = Column(String(100))
-    rep_direct_email = Column(String(100))
-    rep_direct_number = Column(String(50))
-    rep_mobile_number = Column(String(50))
-
-    # --- Financial Info ---
-    gross_annual_sales_y1 = Column(String(50))
-    gross_annual_sales_y2 = Column(String(50))
-    gross_annual_sales_y3 = Column(String(50))
-
-    # --- Business Type ---
-    legal_structure = Column(String(100))
-    type_of_business = Column(String(255))
-    services_or_goods_details = Column(String(500))
-    geographic_service_area = Column(String(100))
-    geographic_service_specify = Column(String(100))
-
-    # --- Previous Business Info ---
-    previous_business_with_wto = Column(Boolean, default=False)
-    wto_business_years = Column(String(50))
-    previous_business_with_others = Column(Boolean, default=False)
-    other_organization_names_years = Column(String(255))
-
-    # --- Bank Info ---
-    bank_name = Column(String(255))
-    bank_address = Column(String(255))
-    beneficiary_name = Column(String(255))
-    iban = Column(String(100))
-    swift_code = Column(String(100))
-    account_currency = Column(String(50))
-    bank_account_number = Column(String(100))
-
-    # --- Declaration & Signature ---
-    declaration = Column(Boolean, default=False)
-    final_signatory_name = Column(String(255))
-    final_signatory_designation = Column(String(100))
-    signature_name = Column(String(255))
-    signature_title = Column(String(100))
-    signature_date = Column(Date)
-
-    # Relationships
-    tender_mappings = relationship("TenderVendorMapping", back_populates="vendor")
-    evaluations = relationship("TenderEvaluation", back_populates="vendor")
-
-    __table_args__ = {"extend_existing": True}
-
-
-class VendorDocument(Base):
-    __tablename__ = "vendor_documents"
-
-    id = Column(Integer, primary_key=True, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False)
-    original_filename = Column(String(255), nullable=False)
-    stored_filename = Column(String(255), nullable=False)
-    file_path = Column(String(500), nullable=True)  # Made optional since we're storing in DB
-    file_content = Column(LargeBinary, nullable=False)  # Store actual file content
-    file_size = Column(Integer)
-    content_type = Column(String(100))
-    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    __table_args__ = {"extend_existing": True}
-
-
 class TenderType(Base):
     __tablename__ = "tender_types"
 
@@ -191,25 +89,6 @@ class TenderAttachment(Base):
     uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = {"extend_existing": True}
-
-
-class TenderVendorMapping(Base):
-    __tablename__ = "tender_vendor_mappings"
-
-    id = Column(Integer, primary_key=True, index=True)
-    tender_id = Column(Integer, ForeignKey("tenders.id"), nullable=False, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
-    mapped_date = Column(DateTime(timezone=True), server_default=func.now())
-    status = Column(String(20), default="active")  # active, inactive, completed
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
-    # Relationships
-    tender = relationship("Tender", back_populates="vendor_mappings")
-    vendor = relationship("Vendor", back_populates="tender_mappings")
-
-    __table_args__ = {"extend_existing": True}
-
 
 
 class EvaluationCriterion(Base):

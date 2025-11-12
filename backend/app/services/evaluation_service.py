@@ -1,6 +1,6 @@
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
-from app.models.user import EvaluationCriterion, TenderEvaluation, Tender, Vendor
+from app.models.user import EvaluationCriterion, TenderEvaluation, Tender
 from app.schemas.evaluation import (
     EvaluationCriterionCreate,
     EvaluationCriterionUpdate,
