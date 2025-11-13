@@ -12,7 +12,6 @@ from app.schemas.user import (
     RoleResponseWithMessage, RoleStatusUpdate,
 )
 from app.schemas.tender_types import TenderTypeCreate, TenderTypeUpdate
-from app.schemas.tender import TenderResponse, TenderUpdate
 from app.schemas.evaluation import (
     EvaluationCriterionCreate, EvaluationCriterionUpdate,
     EvaluationCriterionListResponse,
@@ -29,9 +28,7 @@ from app.services.tender_types_service import (
     get_tender_types, bulk_import_tender_types, create_tender_type,
     update_tender_type, delete_tender_type,
 )
-from app.services.tender_service import (
-    list_tenders_filtered, get_tender_by_id, update_tender, delete_tender,
-)
+
 from app.services.evaluation_service import (
     get_evaluation_criteria,  # list
     get_evaluation_criterion_by_id,  # get by id
@@ -197,51 +194,6 @@ def delete_tender_type_endpoint(code: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender type not found")
     return result
 
-
-# ============================= TENDERS =============================
-
-@router.get("/tenders", response_model=List[TenderResponse])
-def list_tenders(
-    tender_type_code: str | None = Query(None),
-    status: str | None = Query(None),
-    db: Session = Depends(get_db),
-):
-    """
-    List tenders with optional filters: tender_type_code, status.
-    """
-    if tender_type_code or status:
-        return list_tenders_filtered(db, tender_type_code, status)
-    # Fallback to latest first if no filters
-    from app.models.user import Tender  # local import to avoid circulars
-    return db.query(Tender).order_by(Tender.id.desc()).all()
-
-
-@router.get("/tenders/{tender_id}", response_model=TenderResponse)
-def get_tender(tender_id: int, db: Session = Depends(get_db)):
-    """Get tender by ID."""
-    tender = get_tender_by_id(db, tender_id)
-    if not tender:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender not found")
-    return tender
-
-
-@router.put("/tenders/{tender_id}", response_model=TenderResponse)
-def update_tender_endpoint(tender_id: int, payload: TenderUpdate, db: Session = Depends(get_db)):
-    """Update a tender (partial)."""
-    update_dict = payload.dict(exclude_unset=True)
-    tender = update_tender(db, tender_id, update_dict)
-    if not tender:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender not found")
-    return tender
-
-
-@router.delete("/tenders/{tender_id}")
-def delete_tender_endpoint(tender_id: int, db: Session = Depends(get_db)):
-    """Delete a tender and its related records (as per service behavior)."""
-    success = delete_tender(db, tender_id)
-    if not success:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tender not found")
-    return {"success": True, "message": "Tender deleted successfully"}
 
 
 # ======================= EVALUATION CRITERIA =======================

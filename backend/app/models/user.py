@@ -56,38 +56,6 @@ class TenderType(Base):
     __table_args__ = {"extend_existing": True}
 
 
-class Tender(Base):
-    __tablename__ = "tenders"
-
-    id = Column(Integer, primary_key=True, index=True)
-    tender_type_code = Column(String(50), ForeignKey("tender_types.code"), nullable=False, index=True)
-    tender_type_id = Column(Integer, ForeignKey("tender_types.id"), nullable=True, index=True)
-    tender = Column(String(255))
-    description = Column(Text)
-    form_data = Column(JSON, nullable=False)  # Store submitted form fields as JSON
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    status = Column(String)
-
-    # Relationships
-    evaluations = relationship("TenderEvaluation", back_populates="tender")
-    __table_args__ = {"extend_existing": True}
-
-
-class TenderAttachment(Base):
-    __tablename__ = "tender_attachments"
-
-    id = Column(Integer, primary_key=True, index=True)
-    tender_id = Column(Integer, ForeignKey("tenders.id"), nullable=False, index=True)
-    field_key = Column(String(255), nullable=True)  # which field this file belongs to
-    original_filename = Column(String(255), nullable=False)
-    stored_filename = Column(String(255), nullable=False)
-    content_type = Column(String(100))
-    file_size = Column(Integer)
-    file_content = Column(LargeBinary, nullable=False)
-    uploaded_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    __table_args__ = {"extend_existing": True}
 
 
 class EvaluationCriterion(Base):
@@ -104,46 +72,6 @@ class EvaluationCriterion(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
-    # Relationships
-    tender_evaluations = relationship("TenderEvaluation", back_populates="criterion")
     
     __table_args__ = {"extend_existing": True}
 
-
-class TenderEvaluation(Base):
-    __tablename__ = "tender_evaluations"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    tender_id = Column(Integer, ForeignKey("tenders.id"), nullable=False, index=True)
-    vendor_id = Column(Integer, ForeignKey("vendors.id"), nullable=False, index=True)
-    criterion_id = Column(Integer, ForeignKey("evaluation_criteria.id"), nullable=False, index=True)
-    score = Column(Float, nullable=False)
-    comments = Column(Text)
-    evaluated_by = Column(Integer, ForeignKey("users.id"), nullable=True)
-    evaluated_at = Column(DateTime(timezone=True), server_default=func.now())
-    
-    # Relationships
-    tender = relationship("Tender", back_populates="evaluations")
-    criterion = relationship("EvaluationCriterion", back_populates="tender_evaluations")
-    evaluator = relationship("User")
-    
-    __table_args__ = {"extend_existing": True}
-
-
-class OCRResult(Base):
-    __tablename__ = "ocr_results"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    document_id = Column(Integer, ForeignKey("vendor_documents.id"), nullable=False, index=True)
-    status = Column(String(50), default='pending')  # pending, processing, completed, failed, corrected
-    ocr_text = Column(Text, nullable=True)
-    confidence = Column(Float, nullable=True)
-    processed_at = Column(DateTime(timezone=True), nullable=True)
-    error_message = Column(Text, nullable=True)
-    corrected_text = Column(Text, nullable=True)
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
-    # Relationship
-    
-    __table_args__ = {"extend_existing": True}

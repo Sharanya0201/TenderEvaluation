@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import Base, engine
 from app.api.v1 import routes_auth
 # create_tables.py
-from app.models.user import TenderType, Tender, TenderAttachment  # Import models to trigger table creation
+from app.models.user import TenderType  # Import models to trigger table creation
 from sqlalchemy import text
 
 # Create tables
