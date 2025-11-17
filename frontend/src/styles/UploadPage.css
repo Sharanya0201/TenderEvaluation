@@ -1,0 +1,464 @@
+/* UploadPage.css - Consistent with project design system */
+
+/* Container - matches Dashboard layout with sidebar */
+.upload-page-container {
+  flex: 1;
+  padding: 2rem;
+  background-color: #f5f7fa;
+  min-height: 100vh;
+  transition: all 0.3s ease;
+  overflow-y: auto;
+  transition: margin-left 0.3s ease;
+}
+
+/* Page header */
+.upload-page-header {
+  margin-bottom: 2rem;
+}
+
+.upload-page-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+.upload-page-subtitle {
+  margin: 0;
+  color: #7f8c8d;
+  font-size: 1rem;
+}
+
+.upload-api-info {
+  margin-top: 0.5rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.upload-api-info code {
+  background: #f0f0f0;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: monospace;
+  color: #d63384;
+}
+
+/* Main sections */
+.upload-section {
+  background: white;
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
+  margin-bottom: 2rem;
+  border: 1px solid #e8f4ff;
+}
+
+.upload-section-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.upload-section-subtitle {
+  margin: 0 0 1.5rem 0;
+  color: #7f8c8d;
+  font-size: 0.95rem;
+}
+
+/* Form groups */
+.upload-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.upload-form-group label {
+  color: #2c3e50;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+/* Form controls */
+.upload-input,
+.upload-textarea,
+.upload-file-input {
+  padding: 14px 16px;
+  border: 2px solid #e8f4ff;
+  border-radius: 10px;
+  font-size: 15px;
+  transition: all 0.25s ease;
+  background-color: #f8fbff;
+  width: 100%;
+  box-sizing: border-box;
+  color: #2c3e50;
+  font-family: inherit;
+}
+
+.upload-input:focus,
+.upload-textarea:focus,
+.upload-file-input:focus {
+  outline: none;
+  border-color: #0c6dc5;
+  background-color: white;
+  box-shadow: 0 0 0 4px rgba(12, 109, 197, 0.12);
+}
+
+.upload-input:hover,
+.upload-textarea:hover,
+.upload-file-input:hover {
+  border-color: #0c6dc5;
+  background-color: #f0f8ff;
+}
+
+.upload-input::placeholder,
+.upload-textarea::placeholder {
+  color: #a0aec0;
+}
+
+.upload-textarea {
+  min-height: 90px;
+  resize: vertical;
+  font-family: inherit;
+}
+
+.upload-file-input {
+  padding: 10px;
+  cursor: pointer;
+}
+
+/* Button styles */
+.upload-button {
+  background: linear-gradient(145deg, #0c2461 0%, #1e3799 50%, #0c6dc5 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  min-width: 140px;
+}
+
+.upload-button:hover:not(:disabled) {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(12, 37, 97, 0.15);
+}
+
+.upload-button:active:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.upload-button:disabled {
+  background: #cbd5e0;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  opacity: 0.6;
+}
+
+/* Message alerts */
+.upload-message {
+  margin-top: 1rem;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid;
+}
+
+.upload-message.success {
+  background-color: #d4edda;
+  color: #155724;
+  border-color: #c3e6cb;
+}
+
+.upload-message.success::before {
+  content: "✓";
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.upload-message.error {
+  background-color: #f8d7da;
+  color: #721c24;
+  border-color: #f5c6cb;
+}
+
+.upload-message.error::before {
+  content: "⚠";
+  font-weight: bold;
+  font-size: 16px;
+}
+
+.upload-message.info {
+  background-color: #d1ecf1;
+  color: #0c5460;
+  border-color: #bee5eb;
+}
+
+.upload-message.info::before {
+  content: "ℹ";
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* File list */
+.upload-file-list {
+  background: #fafafa;
+  border: 1px solid #f0f0f0;
+  border-radius: 8px;
+  padding: 12px;
+  max-height: 160px;
+  overflow-y: auto;
+  margin-bottom: 1rem;
+}
+
+.upload-file-list-title {
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 8px;
+  font-size: 0.95rem;
+}
+
+.upload-file-list ul {
+  margin: 0;
+  padding-left: 18px;
+  list-style: disc;
+}
+
+.upload-file-list li {
+  font-size: 13px;
+  color: #555;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+/* Data display sections */
+.upload-data-section {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: #f9f9f9;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+}
+
+.upload-data-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.upload-data-details {
+  background: white;
+  border: 1px solid #e8f4ff;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.upload-data-details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #0c6dc5;
+  user-select: none;
+  padding: 8px 0;
+  transition: all 0.2s ease;
+}
+
+.upload-data-details summary:hover {
+  color: #0a4fa0;
+}
+
+.upload-data-details[open] summary {
+  margin-bottom: 12px;
+}
+
+.upload-data-json {
+  background: #f4f4f4;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  max-height: 300px;
+  overflow-y: auto;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+  line-height: 1.4;
+  color: #333;
+}
+
+/* Summary info */
+.upload-summary-info {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.upload-summary-item {
+  padding: 1rem;
+  background: white;
+  border-radius: 8px;
+  border-left: 4px solid #0c6dc5;
+}
+
+.upload-summary-item-label {
+  color: #7f8c8d;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.upload-summary-item-value {
+  color: #2c3e50;
+  font-size: 15px;
+  font-weight: 500;
+  word-break: break-all;
+}
+
+/* Extraction summary table */
+.upload-summary-table-wrapper {
+  overflow-x: auto;
+}
+
+.upload-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin-top: 1rem;
+}
+
+.upload-summary-table thead {
+  background: #e9ecef;
+}
+
+.upload-summary-table th {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 2px solid #ddd;
+  color: #2c3e50;
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.upload-summary-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eee;
+  color: #555;
+}
+
+.upload-summary-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.upload-summary-status-success {
+  color: #28a745;
+  font-weight: 500;
+}
+
+.upload-summary-status-failed {
+  color: #dc3545;
+  font-weight: 500;
+}
+
+.upload-summary-status-warning {
+  color: #ffc107;
+  font-weight: 500;
+}
+
+.upload-summary-note {
+  margin-top: 1rem;
+  font-size: 12px;
+  color: #666;
+  padding: 0.5rem 0.75rem;
+  background: #f0f8ff;
+  border-left: 3px solid #0c6dc5;
+  border-radius: 4px;
+}
+
+.upload-summary-note code {
+  background: #e8f4ff;
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-family: monospace;
+  color: #0c6dc5;
+}
+
+/* Horizontal divider */
+.upload-divider {
+  margin: 2rem 0;
+  border: none;
+  border-top: 2px solid #e8f4ff;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .upload-page-container {
+    padding: 1.5rem;
+  }
+
+  .upload-section {
+    padding: 1.5rem;
+  }
+
+  .upload-section-title {
+    font-size: 1.3rem;
+  }
+
+  .upload-summary-info {
+    grid-template-columns: 1fr;
+  }
+
+  .upload-button {
+    width: 100%;
+  }
+
+  .upload-page-title {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .upload-page-container {
+    padding: 1rem;
+  }
+
+  .upload-section {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  .upload-input,
+  .upload-textarea,
+  .upload-file-input {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .upload-section-title {
+    font-size: 1.1rem;
+  }
+
+  .upload-page-title {
+    font-size: 1.3rem;
+  }
+
+  .upload-summary-table th,
+  .upload-summary-table td {
+    padding: 8px;
+    font-size: 12px;
+  }
+
+  .upload-message {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

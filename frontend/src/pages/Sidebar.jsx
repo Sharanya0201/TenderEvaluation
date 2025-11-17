@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, memo } from "react";
-import { NavLink, useLocation, useNavigate } from "react-router-dom";  // Changed Link to NavLink
+import { NavLink, useNavigate } from "react-router-dom";  // Removed unused useLocation
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
 import "../styles/Sidebar.css";
@@ -7,7 +7,7 @@ import "../styles/Sidebar.css";
 function Sidebar() {
   const { currentUser, logout } = useAuth();
   const navigate = useNavigate();
-  const { isCollapsed, toggleSidebar } = useSidebar();  // Removed useLocation here
+  const { isCollapsed, toggleSidebar } = useSidebar();
   const [activeMenu, setActiveMenu] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [collapsedSections, setCollapsedSections] = useState({});
@@ -31,7 +31,7 @@ function Sidebar() {
           left: rect.right + 10,
         });
       }
-      
+
       if (clickedSection === sectionName) {
         setClickedSection(null);
       } else {
@@ -62,8 +62,9 @@ function Sidebar() {
     };
   }, []);
 
-  // Removed the useEffect that reset clickedSection on location.pathname (no longer needs useLocation)
-
+  // =========================
+  // Navigation structure
+  // =========================
   const navigationStructure = {
     main: [
       { 
@@ -89,11 +90,31 @@ function Sidebar() {
         roles: ['Admin', 'Evaluator','Viewer'],
         badge: '12'
       },
+      // Uploads page (tender upload)
+      {
+        path: '/uploads',
+        label: 'Uploads',
+        icon: 'cloud_upload',
+        roles: ['Admin', 'Evaluator','Viewer'],
+        badge: null
+      },
     ],
-    
     vendors: [
-     
-     
+      // Vendor-specific pages
+      {
+        path: '/vendor-uploads',
+        label: 'Vendor Uploads',
+        icon: 'folder_open',
+        roles: ['Admin', 'Evaluator'],
+        badge: null
+      },
+      {
+        path: '/vendors-list',
+        label: 'Vendors',
+        icon: 'business',
+        roles: ['Admin', 'Evaluator', 'Viewer'],
+        badge: null
+      }
     ],
     users: [
       { 
@@ -128,12 +149,11 @@ function Sidebar() {
         roles: ['Admin', 'Evaluator','Viewer'],
         badge: 'AI'
       },
-      
     ]
   };
 
   const getFilteredNavigation = () => {
-    const userRole = currentUser?.role?.toLowerCase();
+    const userRole = (currentUser?.role || "Viewer").toLowerCase();
     const filtered = {};
     Object.keys(navigationStructure).forEach(section => {
       filtered[section] = navigationStructure[section].filter(item => 
@@ -148,9 +168,9 @@ function Sidebar() {
   const NavItem = ({ item, level = 0 }) => {
     return (
       <li className="sb-nav-item">
-        <NavLink  // Changed to NavLink
+        <NavLink
           to={item.path}
-          end={false}  // Prefix matching (matches your original isActive logic)
+          end={false}
           className={({ isActive }) => `sb-nav-link ${isActive ? 'sb-active' : ''}`}
           title={isCollapsed ? item.label : ""}
           onClick={() => {
@@ -245,7 +265,7 @@ function Sidebar() {
         <ul className="sb-menu-list">
           {items.map((item) => (
             <li key={item.path} className="sb-menu-item">
-              <NavLink  // Changed to NavLink
+              <NavLink
                 to={item.path}
                 end={false}
                 className={({ isActive }) => `sb-menu-link ${isActive ? 'sb-active' : ''}`}

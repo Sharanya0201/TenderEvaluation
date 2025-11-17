@@ -4,8 +4,21 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
+import os
+import shutil
+import json
+import logging
+from typing import List, Optional
 
+from fastapi import APIRouter, Depends, HTTPException, Query, status, File, UploadFile, Form
 # ---------- Schemas ----------
+from sqlalchemy.exc import SQLAlchemyError
+
+# ---------- your existing imports ----------
+# (keep the imports you already have in your file; below are the ones from your earlier message)
+from app.db.database import Base, engine, get_db
+from app.api.v1 import routes_auth  # if circular, remove or adapt import
+# Schemas (imported from your project as in your earlier file)
 from app.schemas.user import (
     UserCreate, UserLogin, UserUpdate, UserResponse, UserListResponse,
     UserStatusUpdate, RoleListResponse, RoleCreate, RoleUpdate,
@@ -23,6 +36,8 @@ from app.services.auth_service import (
     get_users, get_user_by_id, create_user, update_user, delete_user, toggle_user_status,  # users
     get_roles_with_pagination, create_role, update_role, delete_role, toggle_role_status,  # roles
     # Optional: implement check_duplicate in auth_service to support /check-duplicate
+    register_user, login_user, get_users, get_user_by_id, create_user, update_user, delete_user, toggle_user_status,
+    get_roles_with_pagination, create_role, update_role, delete_role, toggle_role_status,
 )
 from app.services.tender_types_service import (
     get_tender_types, bulk_import_tender_types, create_tender_type,
@@ -34,8 +49,15 @@ from app.services.evaluation_service import (
     get_evaluation_criterion_by_id,  # get by id
     create_evaluation_criterion, update_evaluation_criterion, delete_evaluation_criterion,
     toggle_criterion_status, restore_default_criteria,
+    get_evaluation_criteria, get_evaluation_criterion_by_id, create_evaluation_criterion,
+    update_evaluation_criterion, delete_evaluation_criterion, toggle_criterion_status, restore_default_criteria,
 )
+from app.services.document_extraction_service import extraction_service
 
+# ---------- upload model import ----------
+from app.models.upload_models import Tender, Vendor, TenderAttachment, VendorAttachment
+
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
@@ -73,6 +95,7 @@ def check_duplicate(field: str, value: str, db: Session = Depends(get_db)):
     """
     try:
         from app.services.auth_service import check_duplicate as svc_check_dup  # local import if you add it
+        from app.services.auth_service import check_duplicate as svc_check_dup
     except Exception:
         raise HTTPException(
             status_code=status.HTTP_501_NOT_IMPLEMENTED,
@@ -245,3 +268,367 @@ def update_criterion_status_endpoint(criterion_id: int, payload: dict, db: Sessi
 def restore_default_criteria_endpoint(db: Session = Depends(get_db)):
     """Restore default criteria (removes custom ones)."""
     return restore_default_criteria(db)
+
+
+# ======================= UPLOAD ENDPOINTS (TENDERS & VENDORS) =======================
+
+# Attempt to use your auth dependency (if present). This function tries to import a get_current_user
+# dependency from common locations; if none found, it returns None and endpoints accept uploadedby form field.
+def _try_get_current_user_dependency():
+    """
+    Returns a dependency callable or None if not found.
+    The returned callable should be used as: current_user: Optional[User] = Depends(dep)
+    """
+    # try common places; adapt if your project stores get_current_user elsewhere
+    candidate_locations = [
+        "app.api.v1.auth_utils.get_current_user",
+        "app.api.v1.dependencies.get_current_user",
+        "app.services.auth_service.get_current_user",
+        "app.api.v1.routes_auth.get_current_user",  # in case already defined
+    ]
+    for loc in candidate_locations:
+        try:
+            module_path, func_name = loc.rsplit(".", 1)
+            module = __import__(module_path, fromlist=[func_name])
+            func = getattr(module, func_name)
+            return func
+        except Exception:
+            continue
+    return None
+
+
+get_current_user_dep = _try_get_current_user_dependency()
+
+
+# Configure where files are stored on server (change via env UPLOAD_DIR)
+BASE_UPLOAD_DIR = os.environ.get("UPLOAD_DIR", "uploads")
+TENDER_UPLOAD_DIR = os.path.join(BASE_UPLOAD_DIR, "tenders")
+VENDORS_UPLOAD_DIR = os.path.join(BASE_UPLOAD_DIR, "vendors")
+os.makedirs(TENDER_UPLOAD_DIR, exist_ok=True)
+os.makedirs(VENDORS_UPLOAD_DIR, exist_ok=True)
+
+
+@router.post("/upload/tender")
+def upload_tender(
+    title: Optional[str] = Form(None),
+    tenderform: Optional[str] = Form(None),
+    tenderid: Optional[int] = Form(None),  # Optional: if provided, attach to existing tender
+    uploadedby: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_dep) if get_current_user_dep else None,
+):
+    """
+    Upload tender file(s) with automatic data extraction.
+    
+    Two modes:
+    1. Create new tender: Provide 'title' (tenderid will be auto-generated)
+    2. Attach to existing tender: Provide 'tenderid' (will skip title requirement)
+    
+    Extracts data from PDF, Excel, DOCX, PPTX documents and saves as JSON in form_data field.
+    Saves file path in tenderattachments table.
+    """
+    # Determine uploader
+    uploader_str = None
+    if current_user:
+        uploader_str = getattr(current_user, "username", None) or getattr(current_user, "email", None) or str(getattr(current_user, "id", "user"))
+    else:
+        if not uploadedby:
+            raise HTTPException(status_code=400, detail="uploadedby is required")
+        uploader_str = uploadedby
+
+    try:
+        tender = None
+        
+        # Case 1: Attach to existing tender
+        if tenderid:
+            tender = db.query(Tender).filter(Tender.tenderid == tenderid).first()
+            if not tender:
+                raise HTTPException(status_code=404, detail=f"Tender with ID {tenderid} not found")
+        
+        # Case 2: Create new tender
+        else:
+            if not title:
+                raise HTTPException(status_code=400, detail="title is required when creating new tender")
+            
+            tender = Tender(
+                title=title,
+                tenderform=tenderform,
+                uploadedby=uploader_str,
+                form_data={},  # Initialize empty form_data
+            )
+            db.add(tender)
+            db.flush()  # get tender.tenderid
+
+        filepath = None
+        filename = None
+        form_data = {}
+
+        if file:
+            filename = file.filename
+            # Sanitize filename
+            # Normalize and sanitize incoming filename to avoid directory traversal
+            raw_name = filename.replace('\\', '/').lstrip('/')
+            base_name = os.path.basename(raw_name)
+            safe_name = f"{tender.tenderid}_{base_name.replace(' ', '_')}"
+            dest_path = os.path.join(TENDER_UPLOAD_DIR, safe_name)
+
+            # Ensure parent directory exists (defensive)
+            os.makedirs(os.path.dirname(dest_path) or TENDER_UPLOAD_DIR, exist_ok=True)
+
+            # Save file to disk
+            with open(dest_path, "wb") as buffer:
+                shutil.copyfileobj(file.file, buffer)
+            
+            filepath = dest_path
+            tender.filepath = filepath
+            tender.filename = filename
+
+            # Create attachment record in tenderattachments table
+            attachment = TenderAttachment(
+                tenderid=tender.tenderid,
+                filename=filename,
+                filepath=filepath,
+                uploadedby=uploader_str,
+                status="Active"
+            )
+            db.add(attachment)
+
+            # Extract data from document
+            try:
+                logger.info(f"Extracting data from tender file: {filename}")
+                form_data = extraction_service.extract_from_file(dest_path)
+                tender.form_data = form_data
+                # Also store a textual representation of extracted data in tenderform
+                # so that the uploaded/extracted data is available in the `tenderform` text column.
+                try:
+                    tender.tenderform = json.dumps(form_data)
+                except Exception:
+                    # Fallback: store stringified form_data
+                    tender.tenderform = str(form_data)
+                logger.info(f"Successfully extracted data from {filename}")
+            except Exception as extract_err:
+                logger.warning(f"Error extracting data from {filename}: {extract_err}")
+                form_data = {
+                    "status": "extraction_failed",
+                    "error": str(extract_err),
+                    "filename": filename
+                }
+                tender.form_data = form_data
+
+        db.commit()
+        db.refresh(tender)
+
+        # Build attachment info for response
+        attachment_info = None
+        if file:
+            attachment_info = {
+                "filename": filename,
+                "filepath": filepath,
+                "form_data_status": form_data.get("status", "success") if form_data else "no_file"
+            }
+
+        return {
+            "success": True,
+            "tender": {
+                "tenderid": tender.tenderid,
+                "title": tender.title,
+                "filename": tender.filename,
+                "filepath": tender.filepath,
+                "form_data": tender.form_data,
+                "status": tender.status,
+                "uploadedby": tender.uploadedby,
+                "createddate": tender.createddate.isoformat() if tender.createddate else None,
+            },
+            "attachment": attachment_info,
+            "mode": "created" if not tenderid else "attached"
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error in upload_tender: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Unexpected error in upload_tender: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
+
+
+@router.post("/upload/vendors")
+def upload_vendors(
+    tenderid: int = Form(...),
+    vendorform: Optional[str] = Form(None),
+    uploadedby: Optional[str] = Form(None),
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    current_user = Depends(get_current_user_dep) if get_current_user_dep else None,
+):
+    """
+    Upload multiple vendor files with automatic data extraction.
+    Creates one vendor row per file with extracted data saved as JSON in form_data field.
+    File paths are saved separately.
+    """
+    # Determine uploader
+    uploader_str = None
+    if current_user:
+        uploader_str = getattr(current_user, "username", None) or getattr(current_user, "email", None) or str(getattr(current_user, "id", "user"))
+    else:
+        if not uploadedby:
+            raise HTTPException(status_code=400, detail="uploadedby is required")
+        uploader_str = uploadedby
+
+    # Verify tender exists
+    tender = db.query(Tender).filter(Tender.tenderid == tenderid).first()
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+
+    saved = []
+    tender_folder = os.path.join(VENDORS_UPLOAD_DIR, str(tenderid))
+    os.makedirs(tender_folder, exist_ok=True)
+
+    try:
+        for upload in files:
+            filename = upload.filename
+            
+            # Create vendor record
+            vendor = Vendor(
+                tenderid=tenderid,
+                vendorform=vendorform,
+                uploadedby=uploader_str,
+                form_data={},  # Initialize empty form_data
+            )
+            db.add(vendor)
+            db.flush()  # get vendor.vendorid
+
+            # Save file to disk
+            # Allow relative paths from webkitRelativePath, but create parent dirs and sanitize
+            raw_name = filename.replace('\\', '/').lstrip('/')
+            # Reject upward traversal; if present, fall back to basename
+            norm = os.path.normpath(raw_name)
+            if norm.startswith('..') or os.path.isabs(norm):
+                rel_name = os.path.basename(raw_name)
+            else:
+                rel_name = norm
+
+            safe_name = f"{vendor.vendorid}_{rel_name.replace(' ', '_')}"
+            dest_path = os.path.join(tender_folder, safe_name)
+
+            # Ensure parent directories exist (handles nested webkitRelativePath)
+            parent_dir = os.path.dirname(dest_path)
+            if parent_dir:
+                os.makedirs(parent_dir, exist_ok=True)
+
+            with open(dest_path, "wb") as buffer:
+                shutil.copyfileobj(upload.file, buffer)
+
+            vendor.filename = filename
+            vendor.filepath = dest_path
+
+            # Create attachment record in vendorattachments table
+            vendor_attachment = VendorAttachment(
+                vendorid=vendor.vendorid,
+                filename=filename,
+                filepath=dest_path,
+                uploadedby=uploader_str,
+                status="Active"
+            )
+            db.add(vendor_attachment)
+
+            # Extract data from document
+            try:
+                logger.info(f"Extracting data from vendor file: {filename}")
+                form_data = extraction_service.extract_from_file(dest_path)
+                vendor.form_data = form_data
+                logger.info(f"Successfully extracted data from {filename}")
+            except Exception as extract_err:
+                logger.warning(f"Error extracting data from {filename}: {extract_err}")
+                form_data = {
+                    "status": "extraction_failed",
+                    "error": str(extract_err),
+                    "filename": filename
+                }
+                vendor.form_data = form_data
+
+            db.flush()
+            
+            saved.append({
+                "vendorid": vendor.vendorid,
+                "filename": vendor.filename,
+                "filepath": vendor.filepath,
+                "form_data_status": vendor.form_data.get("status", "unknown"),
+            })
+
+        db.commit()
+        return {
+            "success": True,
+            "saved": saved,
+            "message": f"Uploaded {len(saved)} vendor file(s) with data extraction"
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error in upload_vendors: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Unexpected error in upload_vendors: {e}")
+        raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
+
+
+@router.get("/upload/vendors/list/{tenderid}")
+def list_vendor_files(tenderid: int):
+    """List all vendor files for a tender"""
+    tender_folder = os.path.join(VENDORS_UPLOAD_DIR, str(tenderid))
+    if not os.path.exists(tender_folder):
+        return {"files": []}
+    files = os.listdir(tender_folder)
+    return {"files": files}
+
+
+@router.get("/tender/{tenderid}")
+def get_tender_details(tenderid: int, db: Session = Depends(get_db)):
+    """Get tender details including extracted form_data"""
+    tender = db.query(Tender).filter(Tender.tenderid == tenderid).first()
+    if not tender:
+        raise HTTPException(status_code=404, detail="Tender not found")
+    
+    return {
+        "success": True,
+        "tender": {
+            "tenderid": tender.tenderid,
+            "title": tender.title,
+            "tenderform": tender.tenderform,
+            "filename": tender.filename,
+            "filepath": tender.filepath,
+            "form_data": tender.form_data,
+            "status": tender.status,
+            "uploadedby": tender.uploadedby,
+            "createddate": tender.createddate.isoformat() if tender.createddate else None,
+        }
+    }
+
+
+@router.get("/vendor/{vendorid}")
+def get_vendor_details(vendorid: int, db: Session = Depends(get_db)):
+    """Get vendor details including extracted form_data"""
+    vendor = db.query(Vendor).filter(Vendor.vendorid == vendorid).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    
+    return {
+        "success": True,
+        "vendor": {
+            "vendorid": vendor.vendorid,
+            "tenderid": vendor.tenderid,
+            "vendorform": vendor.vendorform,
+            "filename": vendor.filename,
+            "filepath": vendor.filepath,
+            "form_data": vendor.form_data,
+            "status": vendor.status,
+            "uploadedby": vendor.uploadedby,
+            "createddate": vendor.createddate.isoformat() if vendor.createddate else None,
+        }
+    }
+
+
+
+# You can add additional helper endpoints such as GET /tenders or GET /vendors/<id> if needed.
+# End of routes_auth.py
