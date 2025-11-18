@@ -289,7 +289,10 @@ const TenderStatus = () => {
         title: editForm.tender,
         status: editForm.status
       };
-      await updateTender(editingTender.tenderid, updateData);
+      // The list is based on attachments; attachments include tenderid_fk -> the parent Tender id.
+      // Use tenderid_fk when available so we update the actual Tender row in the DB.
+      const parentTenderId = editingTender.tenderid_fk || editingTender.tenderid;
+      await updateTender(parentTenderId, updateData);
       toast.success('Tender updated successfully');
       setEditingTender(null);
       loadTenders();

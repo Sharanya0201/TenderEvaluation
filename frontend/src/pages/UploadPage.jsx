@@ -289,7 +289,21 @@ export default function UploadPage() {
               <div className="upload-file-list-title">Selected Files ({tenderFiles.length})</div>
               <ul>
                 {tenderFiles.map((f, i) => (
-                  <li key={i}>{f.name}</li>
+                  <li key={i}>
+                    <span>{f.name}</span>
+                    <button
+                      type="button"
+                      className="upload-file-remove-btn"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setTenderFiles(tenderFiles.filter((_, index) => index !== i));
+                      }}
+                      disabled={tenderLoading}
+                      title="Remove this file"
+                    >
+                      ✕
+                    </button>
+                  </li>
                 ))}
               </ul>
             </div>
@@ -448,7 +462,21 @@ export default function UploadPage() {
               <div className="upload-file-list-title">Selected Files ({vendorFiles.length})</div>
               <ul>
                 {vendorFiles.slice(0, 500).map((f, i) => (
-                  <li key={i}>{f.webkitRelativePath || f.name}</li>
+                  <li key={i}>
+                    <span>{f.webkitRelativePath || f.name}</span>
+                    <button
+                      type="button"
+                      className="upload-file-remove-btn"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setVendorFiles(vendorFiles.filter((_, index) => index !== i));
+                      }}
+                      disabled={vendorLoading}
+                      title="Remove this file"
+                    >
+                      ✕
+                    </button>
+                  </li>
                 ))}
               </ul>
             </div>

@@ -10,21 +10,26 @@ const API_BASE = `${API_BASE_URL}/api/v1`;
 
 // Upload Modal Component
 const UploadModal = ({ selectedId, docType, onUpload, onCancel, loading }) => {
+  // file may be a single File (tender) or an array of Files (vendor folder)
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
   const fileInputRef = React.useRef();
 
   const handleFileSelect = (e) => {
-    const selectedFile = e.target.files?.[0];
-    if (selectedFile) {
-      setFile(selectedFile);
+    const files = e.target.files;
+    if (!files) return;
+    if (docType === "vendor") {
+      // store as array so we can append each file with its relative path
+      setFile(Array.from(files));
+    } else {
+      setFile(files[0]);
     }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!file) {
-      alert("Please select a file");
+    if (!file || (Array.isArray(file) && file.length === 0)) {
+      alert("Please select a file or folder");
       return;
     }
     if (docType === "tender" && !title) {
@@ -72,6 +77,7 @@ const UploadModal = ({ selectedId, docType, onUpload, onCancel, loading }) => {
               className="um-file-input"
               disabled={loading}
               accept=".pdf,.xlsx,.xls,.docx,.pptx,.txt,.png,.jpg,.jpeg,.tiff,.bmp,.gif"
+              {...(docType === "vendor" ? { webkitdirectory: "", directory: "", multiple: true } : {})}
             />
             <div
               className="um-file-upload-box"
@@ -80,7 +86,9 @@ const UploadModal = ({ selectedId, docType, onUpload, onCancel, loading }) => {
               <div className="um-file-upload-icon">📤</div>
               <p>
                 {file
-                  ? `Selected: ${file.name}`
+                  ? Array.isArray(file)
+                    ? `Selected: ${file.length} file(s)`
+                    : `Selected: ${file.name}`
                   : "Click or drag file to select"}
               </p>
               <small>Supported: PDF, Excel, Word, PowerPoint, Images, Text</small>
@@ -285,7 +293,15 @@ export default function UploadManagementPage() {
         }
       } else {
         fd.append("tenderid", selectedTender);
-        fd.append("files", file);
+
+        // file may be an array (directory) or a single File; append each preserving relative path
+        if (Array.isArray(file)) {
+          file.forEach((f) => {
+            fd.append("files", f, f.webkitRelativePath || f.name);
+          });
+        } else {
+          fd.append("files", file, file.webkitRelativePath || file.name);
+        }
 
         const res = await fetch(`${API_BASE}/upload/vendors`, {
           method: "POST",
@@ -294,12 +310,13 @@ export default function UploadManagementPage() {
 
         if (res.ok) {
           const data = await res.json();
-          setVendorDocs((prev) => [...prev, data.vendor]);
+          // refresh vendor/tender docs for selected tender
+          await handleTenderSelect(selectedTender);
           setUploadModal({ isOpen: false, docType: null });
-          alert("Vendor document uploaded successfully!");
+          alert(`✓ Successfully uploaded ${data?.saved?.length || 0} vendor file(s)`);
         } else {
-          const err = await res.json();
-          alert(`Upload failed: ${err.detail || err.message}`);
+          const err = await res.json().catch(() => ({}));
+          alert(`Upload failed: ${err.detail || err.message || res.statusText}`);
         }
       }
     } catch (error) {
