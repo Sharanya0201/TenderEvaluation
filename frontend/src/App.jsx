@@ -16,6 +16,7 @@ import EvaluationCriteriaPage from "./pages/EvaluationCriteriaPage";
 import TenderStatus from "./pages/Tenderstatus";
 // Upload page (combined tender + vendor uploader)
 import UploadPage from "./pages/UploadPage";
+import UploadManagementPage from "./pages/UploadManagementPageNew";
 
 function App() {
   return (
@@ -47,6 +48,7 @@ function App() {
            {/* Upload routes (match Sidebar entries) */}
             <Route path="uploads" element={<UploadPage />} />
             <Route path="vendor-uploads" element={<UploadPage />} />
+            <Route path="upload-management" element={<UploadManagementPage />} />
           </Route>
 
           {/* Fallback */}

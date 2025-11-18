@@ -1,6 +1,7 @@
 
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from starlette.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.db.database import get_db
@@ -398,14 +399,8 @@ def upload_tender(
             try:
                 logger.info(f"Extracting data from tender file: {filename}")
                 form_data = extraction_service.extract_from_file(dest_path)
-                tender.form_data = form_data
-                # Also store a textual representation of extracted data in tenderform
-                # so that the uploaded/extracted data is available in the `tenderform` text column.
-                try:
-                    tender.tenderform = json.dumps(form_data)
-                except Exception:
-                    # Fallback: store stringified form_data
-                    tender.tenderform = str(form_data)
+                # Save extracted data to the attachment record, not the tender record
+                attachment.form_data = form_data
                 logger.info(f"Successfully extracted data from {filename}")
             except Exception as extract_err:
                 logger.warning(f"Error extracting data from {filename}: {extract_err}")
@@ -414,7 +409,7 @@ def upload_tender(
                     "error": str(extract_err),
                     "filename": filename
                 }
-                tender.form_data = form_data
+                attachment.form_data = form_data
 
         db.commit()
         db.refresh(tender)
@@ -425,7 +420,8 @@ def upload_tender(
             attachment_info = {
                 "filename": filename,
                 "filepath": filepath,
-                "form_data_status": form_data.get("status", "success") if form_data else "no_file"
+                "form_data": attachment.form_data or {},
+                "form_data_status": attachment.form_data.get("status", "success") if attachment.form_data else "no_file"
             }
 
         return {
@@ -435,7 +431,7 @@ def upload_tender(
                 "title": tender.title,
                 "filename": tender.filename,
                 "filepath": tender.filepath,
-                "form_data": tender.form_data,
+                "form_data": tender.form_data,  # Keep for backward compatibility
                 "status": tender.status,
                 "uploadedby": tender.uploadedby,
                 "createddate": tender.createddate.isoformat() if tender.createddate else None,
@@ -537,7 +533,8 @@ def upload_vendors(
             try:
                 logger.info(f"Extracting data from vendor file: {filename}")
                 form_data = extraction_service.extract_from_file(dest_path)
-                vendor.form_data = form_data
+                # Save extracted data to the attachment record, not the vendor record
+                vendor_attachment.form_data = form_data
                 logger.info(f"Successfully extracted data from {filename}")
             except Exception as extract_err:
                 logger.warning(f"Error extracting data from {filename}: {extract_err}")
@@ -546,7 +543,7 @@ def upload_vendors(
                     "error": str(extract_err),
                     "filename": filename
                 }
-                vendor.form_data = form_data
+                vendor_attachment.form_data = form_data
 
             db.flush()
             
@@ -628,6 +625,359 @@ def get_vendor_details(vendorid: int, db: Session = Depends(get_db)):
         }
     }
 
+
+# ======================= UPLOAD MANAGEMENT ENDPOINTS =======================
+
+@router.get("/uploads/tenders/list")
+def get_tenders_list(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db)
+):
+    """Get list of all tenders from tenders table for dropdown"""
+    try:
+        total = db.query(Tender).count()
+        tenders = db.query(Tender).offset(skip).limit(limit).all()
+        
+        return {
+            "success": True,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "data": [
+                {
+                    "tenderid": t.tenderid,
+                    "title": t.title,
+                    "status": t.status,
+                    "createddate": t.createddate.isoformat() if t.createddate else None,
+                }
+                for t in tenders
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching tenders: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching tenders: {str(e)}")
+
+
+@router.get("/uploads/tenders")
+def get_all_tenders(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    tenderid: int = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get list of tender attachments with optional filtering by tenderid"""
+    try:
+        from app.models.upload_models import TenderAttachment
+        
+        query = db.query(TenderAttachment)
+        
+        if tenderid:
+            query = query.filter(TenderAttachment.tenderid == tenderid)
+        
+        total = query.count()
+        attachments = query.offset(skip).limit(limit).all()
+        
+        return {
+            "success": True,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "tenders": [
+                {
+                    "tenderid": a.tenderattachmentsid,
+                    "tenderid_fk": a.tenderid,
+                    "title": a.filename,
+                    "filename": a.filename,
+                    "filepath": a.filepath,
+                    "status": a.status,
+                    "uploadedby": a.uploadedby,
+                    "createddate": a.createddate.isoformat() if a.createddate else None,
+                    "form_data": a.form_data or {},
+                }
+                for a in attachments
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching tenders: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching tenders: {str(e)}")
+
+
+@router.get("/uploads/vendors")
+def get_all_vendors(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    tenderid: int = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get list of all vendor attachments or attachments for a specific tender"""
+    try:
+        from app.models.upload_models import VendorAttachment
+        
+        query = db.query(VendorAttachment)
+        
+        if tenderid:
+            # Join with vendors table to filter by tenderid
+            from app.models.upload_models import Vendor
+            query = query.join(Vendor).filter(Vendor.tenderid == tenderid)
+        
+        total = query.count()
+        attachments = query.offset(skip).limit(limit).all()
+        
+        return {
+            "success": True,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "vendors": [
+                {
+                    "vendorid": a.vendorattachmentid,
+                    "tenderid": a.vendor.tenderid,
+                    "filename": a.filename,
+                    "filepath": a.filepath,
+                    "status": a.status,
+                    "uploadedby": a.uploadedby,
+                    "createddate": a.createddate.isoformat() if a.createddate else None,
+                    "form_data": a.form_data or {},
+                }
+                for a in attachments
+            ]
+        }
+    except Exception as e:
+        logger.error(f"Error fetching vendors: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching vendors: {str(e)}")
+
+
+@router.put("/uploads/tender/{tenderid}")
+def update_tender(
+    tenderid: int,
+    title: str = Form(...),
+    status: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Update tender details (title and status)"""
+    try:
+        tender = db.query(Tender).filter(Tender.tenderid == tenderid).first()
+        if not tender:
+            raise HTTPException(status_code=404, detail="Tender not found")
+        
+        tender.title = title
+        tender.status = status
+        db.commit()
+        db.refresh(tender)
+        
+        logger.info(f"Updated tender {tenderid}")
+        
+        return {
+            "success": True,
+            "message": "Tender updated successfully",
+            "tender": {
+                "tenderid": tender.tenderid,
+                "title": tender.title,
+                "filename": tender.filename,
+                "filepath": tender.filepath,
+                "status": tender.status,
+                "uploadedby": tender.uploadedby,
+                "createddate": tender.createddate.isoformat() if tender.createddate else None,
+                "form_data": tender.form_data,
+            }
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error updating tender {tenderid}: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating tender {tenderid}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating tender: {str(e)}")
+
+
+@router.put("/uploads/vendor/{vendorid}")
+def update_vendor(
+    vendorid: int,
+    status: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    """Update vendor status"""
+    try:
+        vendor = db.query(Vendor).filter(Vendor.vendorid == vendorid).first()
+        if not vendor:
+            raise HTTPException(status_code=404, detail="Vendor not found")
+        
+        vendor.status = status
+        db.commit()
+        db.refresh(vendor)
+        
+        logger.info(f"Updated vendor {vendorid}")
+        
+        return {
+            "success": True,
+            "message": "Vendor updated successfully",
+            "vendor": {
+                "vendorid": vendor.vendorid,
+                "tenderid": vendor.tenderid,
+                "filename": vendor.filename,
+                "filepath": vendor.filepath,
+                "status": vendor.status,
+                "uploadedby": vendor.uploadedby,
+                "createddate": vendor.createddate.isoformat() if vendor.createddate else None,
+                "form_data": vendor.form_data,
+            }
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error updating vendor {vendorid}: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error updating vendor {vendorid}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error updating vendor: {str(e)}")
+
+
+@router.get("/downloads/tender/{attachment_id}")
+def download_tender_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db)
+):
+    """Download a tender attachment file"""
+    try:
+        from app.models.upload_models import TenderAttachment
+        
+        attachment = db.query(TenderAttachment).filter(
+            TenderAttachment.tenderattachmentsid == attachment_id
+        ).first()
+        
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Tender attachment not found")
+        
+        if not attachment.filepath or not os.path.exists(attachment.filepath):
+            logger.warning(f"File not found: {attachment.filepath}")
+            raise HTTPException(status_code=404, detail="File not found on server")
+        
+        return FileResponse(
+            path=attachment.filepath,
+            media_type="application/octet-stream",
+            filename=attachment.filename
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading tender attachment {attachment_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Download error: {str(e)}")
+
+
+@router.get("/downloads/vendor/{attachment_id}")
+def download_vendor_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db)
+):
+    """Download a vendor attachment file"""
+    try:
+        from app.models.upload_models import VendorAttachment
+        
+        attachment = db.query(VendorAttachment).filter(
+            VendorAttachment.vendorattachmentid == attachment_id
+        ).first()
+        
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Vendor attachment not found")
+        
+        if not attachment.filepath or not os.path.exists(attachment.filepath):
+            logger.warning(f"File not found: {attachment.filepath}")
+            raise HTTPException(status_code=404, detail="File not found on server")
+        
+        return FileResponse(
+            path=attachment.filepath,
+            media_type="application/octet-stream",
+            filename=attachment.filename
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error downloading vendor attachment {attachment_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Download error: {str(e)}")
+
+
+@router.delete("/uploads/tender/{attachment_id}")
+def delete_tender_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a specific tender attachment file only (not the tender itself)"""
+    try:
+        from app.models.upload_models import TenderAttachment
+        
+        attachment = db.query(TenderAttachment).filter(TenderAttachment.tenderattachmentsid == attachment_id).first()
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Tender attachment not found")
+        
+        # Delete file from disk if it exists
+        if attachment.filepath and os.path.exists(attachment.filepath):
+            try:
+                os.remove(attachment.filepath)
+                logger.info(f"Deleted file: {attachment.filepath}")
+            except Exception as e:
+                logger.warning(f"Could not delete file {attachment.filepath}: {e}")
+        
+        # Database delete - only the attachment record
+        db.delete(attachment)
+        db.commit()
+        
+        logger.info(f"Deleted tender attachment {attachment_id}")
+        
+        return {
+            "success": True,
+            "message": f"Tender attachment {attachment_id} deleted successfully"
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error deleting tender attachment {attachment_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting tender attachment {attachment_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting tender attachment: {str(e)}")
+
+
+@router.delete("/uploads/vendor/{attachment_id}")
+def delete_vendor_attachment(
+    attachment_id: int,
+    db: Session = Depends(get_db)
+):
+    """Delete a specific vendor attachment file only (not the vendor or tender itself)"""
+    try:
+        from app.models.upload_models import VendorAttachment
+        
+        attachment = db.query(VendorAttachment).filter(VendorAttachment.vendorattachmentid == attachment_id).first()
+        if not attachment:
+            raise HTTPException(status_code=404, detail="Vendor attachment not found")
+        
+        # Delete file from disk if it exists
+        if attachment.filepath and os.path.exists(attachment.filepath):
+            try:
+                os.remove(attachment.filepath)
+                logger.info(f"Deleted file: {attachment.filepath}")
+            except Exception as e:
+                logger.warning(f"Could not delete file {attachment.filepath}: {e}")
+        
+        # Database delete - only the attachment record
+        db.delete(attachment)
+        db.commit()
+        
+        logger.info(f"Deleted vendor attachment {attachment_id}")
+        
+        return {
+            "success": True,
+            "message": f"Vendor attachment {attachment_id} deleted successfully"
+        }
+    except SQLAlchemyError as e:
+        db.rollback()
+        logger.error(f"Database error deleting vendor attachment {attachment_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Error deleting vendor attachment {attachment_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error deleting vendor attachment: {str(e)}")
 
 
 # You can add additional helper endpoints such as GET /tenders or GET /vendors/<id> if needed.

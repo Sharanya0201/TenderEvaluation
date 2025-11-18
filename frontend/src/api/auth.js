@@ -132,7 +132,7 @@ export const deleteTenderType = async (code) => {
 //-------------------------- TENDER STATUS  -----------------
 
 export const getTender = async (tenderId) => {
-  return apiGet(`/api/v1/auth/tenders/${tenderId}`);
+  return apiGet(`/api/v1/auth/tender/${tenderId}`);
 };
 
 export const getTenders = async (filters = {}) => {
@@ -140,15 +140,56 @@ export const getTenders = async (filters = {}) => {
   if (filters.tender_type_code) queryParams.append('tender_type_code', filters.tender_type_code);
   if (filters.status) queryParams.append('status', filters.status);
   const queryString = queryParams.toString();
-  return apiGet(queryString ? `/api/v1/auth/tenders?${queryString}` : '/api/v1/auth/tenders');
+  return apiGet(queryString ? `/api/v1/auth/uploads/tenders?${queryString}` : '/api/v1/auth/uploads/tenders');
 };
 
 export const updateTender = async (tenderId, tenderData) => {
-  return apiPut(`/api/v1/auth/tenders/${tenderId}`, tenderData);
+  const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+  
+  const formData = new FormData();
+  if (tenderData.title) formData.append('title', tenderData.title);
+  if (tenderData.status) formData.append('status', tenderData.status);
+  
+  const config = {
+    method: 'PUT',
+    headers: {},
+  };
+
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/uploads/tender/${tenderId}`, {
+      ...config,
+      body: formData,
+    });
+
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      data = await response.text();
+    }
+
+    if (!response.ok) {
+      const errorMessage = data?.detail || data?.message || data || `HTTP error! status: ${response.status}`;
+      const error = new Error(errorMessage);
+      error.status = response.status;
+      throw error;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('API request failed:', error);
+    throw error;
+  }
 };
 
-export const deleteTender = async (tenderId) => {
-  return apiDelete(`/api/v1/auth/tenders/${tenderId}`);
+export const deleteTender = async (attachmentId) => {
+  return apiDelete(`/api/v1/auth/uploads/tender/${attachmentId}`);
 };
 
 

@@ -93,11 +93,20 @@ function Sidebar() {
       // Uploads page (tender upload)
       {
         path: '/uploads',
-        label: 'Uploads',
+        label: 'TenderVendor Mapping',
         icon: 'cloud_upload',
         roles: ['Admin', 'Evaluator','Viewer'],
         badge: null
       },
+    ],
+    uploads: [
+      {
+        path: '/upload-management',
+        label: 'TenderVendor Uploads',
+        icon: 'manage_history',
+        roles: ['Admin', 'Evaluator', 'Viewer'],
+        badge: null
+      }
     ],
     vendors: [
       // Vendor-specific pages
@@ -116,6 +125,7 @@ function Sidebar() {
         badge: null
       }
     ],
+    
     users: [
       { 
         path: '/user-management', 
@@ -303,6 +313,7 @@ function Sidebar() {
       main: "Main Navigation",
       tenders: "Tender Management",
       vendors: "Vendor Management",
+      uploads: "Upload Management",
       users: "User Management",
       roles: "Role Management",
       ai: "AI Features"
@@ -315,6 +326,7 @@ function Sidebar() {
       main: "home",
       tenders: "view_timeline",
       vendors: "business_center",
+      uploads: "cloud_upload",
       users: "people",
       roles: "admin_panel_settings",
       ai: "smart_toy"
@@ -394,6 +406,7 @@ function Sidebar() {
           {renderNavigationSection('main', filteredNavigation.main, "Main", "home")}
           {renderNavigationSection('tenders', filteredNavigation.tenders, "Tender Management", "view_timeline")}
           {renderNavigationSection('vendors', filteredNavigation.vendors, "Vendor Management", "business_center")}
+          {renderNavigationSection('uploads', filteredNavigation.uploads, "Upload Management", "cloud_upload")}
           {renderNavigationSection('users', filteredNavigation.users, "User Management", "people")}
           {renderNavigationSection('roles', filteredNavigation.roles, "Role Management", "admin_panel_settings")}
           {renderNavigationSection('ai', filteredNavigation.ai, "AI Features", "smart_toy")}

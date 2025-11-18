@@ -1,5 +1,5 @@
 // src/pages/UploadPage.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
 import Sidebar from "./Sidebar";
@@ -28,6 +28,34 @@ export default function UploadPage() {
   const [vendorLoading, setVendorLoading] = useState(false);
   const [vendorExtractedData, setVendorExtractedData] = useState(null);
   const [showVendorData, setShowVendorData] = useState(false);
+
+  // Tenders list state for dropdown
+  const [tenders, setTenders] = useState([]);
+  const [tendersLoading, setTendersLoading] = useState(false);
+
+  // Track the currently uploaded tender
+  const [uploadedTenderId, setUploadedTenderId] = useState(null);
+  const [uploadedTenderTitle, setUploadedTenderTitle] = useState(null);
+
+  // Load tenders on component mount
+  useEffect(() => {
+    loadTenders();
+  }, []);
+
+  const loadTenders = async () => {
+    try {
+      setTendersLoading(true);
+      const response = await fetch(`${API_BASE}/uploads/tenders/list?limit=1000`);
+      const data = await response.json();
+      if (data.success) {
+        setTenders(data.data || []);
+      }
+    } catch (error) {
+      console.error("Error loading tenders:", error);
+    } finally {
+      setTendersLoading(false);
+    }
+  };
 
   // Utility: get uploader string from currentUser
   const getUploaderString = () => {
@@ -91,8 +119,10 @@ export default function UploadPage() {
         currentTenderId = tender?.tenderid;
 
         if (i === 0) {
-          // First upload - store tender ID
+          // First upload - store tender ID and title for vendor section
           setVendorTenderId(String(currentTenderId));
+          setUploadedTenderId(currentTenderId);
+          setUploadedTenderTitle(tender?.title || tenderTitle);
         }
 
         uploadedCount++;
@@ -356,22 +386,46 @@ export default function UploadPage() {
       <hr className="upload-divider" />
 
       {/* Vendor Upload */}
-      <section className="upload-section">
+      <section className={`upload-section ${!uploadedTenderId ? "upload-section-disabled" : ""}`}>
         <h2 className="upload-section-title">👥 Upload Vendor Files</h2>
         <p className="upload-section-subtitle">Select a folder or individual files to attach to a tender. Auto-linked to the tender you just uploaded.</p>
 
-        <form onSubmit={handleVendorUpload}>
+        {!uploadedTenderId && (
+          <div className="upload-info-message upload-info-warning">
+            <span className="upload-info-icon">⚠️</span>
+            <span className="upload-info-text">Please upload a tender first before uploading vendor files.</span>
+          </div>
+        )}
+
+        <form onSubmit={handleVendorUpload} disabled={!uploadedTenderId}>
           <div className="upload-form-group">
-            <label htmlFor="vendor-tender-id">Attach to Tender ID *</label>
-            <input
-              id="vendor-tender-id"
-              type="number"
-              className="upload-input"
-              value={vendorTenderId}
-              required
-              onChange={(e) => setVendorTenderId(e.target.value)}
-              placeholder="Auto-filled after tender upload, or enter manually"
-            />
+            {uploadedTenderTitle ? (
+              <>
+                <label>Attaching to Tender</label>
+                <div className="upload-tender-display">
+                  <span className="upload-tender-title">{uploadedTenderTitle}</span>
+                  <span className="upload-tender-id">(ID: {uploadedTenderId})</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <label htmlFor="vendor-tender-select">Attach to Tender *</label>
+                <select
+                  id="vendor-tender-select"
+                  className="upload-input"
+                  value={vendorTenderId}
+                  required
+                  onChange={(e) => setVendorTenderId(e.target.value)}
+                >
+                  <option value="">-- Please upload a tender first --</option>
+                  {tenders.map((tender) => (
+                    <option key={tender.tenderid} value={tender.tenderid}>
+                      {tender.title} (ID: {tender.tenderid})
+                    </option>
+                  ))}
+                </select>
+              </>
+            )}
           </div>
 
           <div className="upload-form-group">
@@ -383,6 +437,7 @@ export default function UploadPage() {
               webkitdirectory="true"
               directory="true"
               multiple
+              disabled={!uploadedTenderId}
               onChange={handleVendorFolderChange}
               accept=".pdf,.xlsx,.xls,.docx,.doc,.pptx,.ppt,.txt,.jpg,.jpeg,.png"
             />
@@ -399,7 +454,11 @@ export default function UploadPage() {
             </div>
           )}
 
-          <button type="submit" className="upload-button" disabled={vendorLoading}>
+          <button 
+            type="submit" 
+            className="upload-button" 
+            disabled={vendorLoading || !uploadedTenderId || vendorFiles.length === 0}
+          >
             {vendorLoading ? "Uploading & Extracting..." : "Upload Vendor Files"}
           </button>
         </form>

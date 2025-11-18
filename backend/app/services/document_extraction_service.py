@@ -24,6 +24,13 @@ except ImportError:
     HAS_PDF2IMAGE = False
 
 try:
+    import pytesseract
+    from PIL import Image
+    HAS_PYTESSERACT = True
+except Exception:
+    HAS_PYTESSERACT = False
+
+try:
     from docx import Document as DocxDocument
     HAS_PYTHON_DOCX = True
 except ImportError:
@@ -74,6 +81,7 @@ class DocumentExtractionService:
         """
         Extract data from a file based on its extension.
         Returns a dictionary with extracted data.
+        Uses doctr OCR as primary method for best accuracy.
         """
         file_path = Path(file_path)
         extension = file_path.suffix.lower()
@@ -90,6 +98,9 @@ class DocumentExtractionService:
             return self.extract_from_pptx(str(file_path))
         elif extension == ".txt":
             return self.extract_from_text(str(file_path))
+        elif extension in [".png", ".jpg", ".jpeg", ".tiff", ".bmp", ".gif"]:
+            # Image files: try doctr first, then pytesseract fallback
+            return self.extract_from_image(str(file_path))
         else:
             logger.warning(f"Unsupported file type: {extension}")
             return {
@@ -100,19 +111,24 @@ class DocumentExtractionService:
             }
 
     def extract_from_pdf(self, file_path: str) -> Dict[str, Any]:
-        """Extract text and metadata from PDF using OCR"""
+        """
+        Extract text and metadata from PDF using doctr (primary OCR).
+        Falls back to pytesseract only if doctr is unavailable or fails.
+        """
         try:
             result = {
                 "file_type": "pdf",
                 "filename": Path(file_path).name,
                 "pages": [],
                 "full_text": "",
-                "metadata": {}
+                "metadata": {},
+                "extraction_method": "none"
             }
 
-            # Try to extract with OCR if doctr is available
+            # PRIMARY: Use doctr OCR for best accuracy
             if HAS_DOCTR:
                 try:
+                    logger.info(f"Using doctr OCR for PDF: {Path(file_path).name}")
                     ocr_model = self.get_ocr_model()
                     if ocr_model:
                         doc = DocumentFile.from_pdf(file_path)
@@ -126,32 +142,66 @@ class DocumentExtractionService:
                                 "blocks": []
                             }
                             
+                            page_text = ""
                             for block in page.blocks:
                                 block_text = ""
+                                block_confidence = 0.0
+                                word_count = 0
+                                
                                 for line in block.lines:
                                     for word in line.words:
                                         block_text += word.value + " "
+                                        block_confidence += word.confidence if hasattr(word, 'confidence') else 1.0
+                                        word_count += 1
                                 
                                 if block_text.strip():
+                                    avg_confidence = block_confidence / word_count if word_count > 0 else 0.0
                                     page_data["blocks"].append({
                                         "text": block_text.strip(),
-                                        "confidence": float(block.confidence) if hasattr(block, 'confidence') else 0.0
+                                        "confidence": float(avg_confidence)
                                     })
-                                    page_data["text"] += block_text
+                                    page_text += block_text + " "
                             
-                            full_text += page_data["text"] + "\n"
+                            page_data["text"] = page_text.strip()
+                            full_text += page_text + "\n"
                             result["pages"].append(page_data)
                         
                         result["full_text"] = full_text.strip()
                         result["status"] = "success"
-                        result["extraction_method"] = "ocr"
+                        result["extraction_method"] = "doctr_ocr"
+                        logger.info(f"✓ Successfully extracted PDF using doctr: {Path(file_path).name}")
                         return result
                 except Exception as e:
-                    logger.warning(f"OCR extraction failed, falling back: {e}")
+                    logger.error(f"doctr OCR extraction failed: {e}")
+                    # Continue to fallback
 
-            # Fallback: try pdf2image + basic text extraction
+            # FALLBACK 1: pytesseract (if doctr not available or failed)
+            if HAS_PYTESSERACT and HAS_PDF2IMAGE:
+                try:
+                    logger.info(f"Falling back to pytesseract for PDF: {Path(file_path).name}")
+                    pages_text = []
+                    images = pdf2image.convert_from_path(file_path)
+                    
+                    for i, img in enumerate(images):
+                        text = pytesseract.image_to_string(img)
+                        pages_text.append(text)
+                    
+                    full_text = "\n".join(pages_text).strip()
+                    result["pages"] = [
+                        {"page_number": i + 1, "text": p} for i, p in enumerate(pages_text)
+                    ]
+                    result["full_text"] = full_text
+                    result["status"] = "success"
+                    result["extraction_method"] = "pytesseract_fallback"
+                    logger.info(f"✓ Successfully extracted PDF using pytesseract: {Path(file_path).name}")
+                    return result
+                except Exception as e:
+                    logger.error(f"pytesseract PDF fallback failed: {e}")
+
+            # FALLBACK 2: pdf2image (basic image info, no text)
             if HAS_PDF2IMAGE:
                 try:
+                    logger.info(f"Falling back to basic pdf2image conversion: {Path(file_path).name}")
                     images = pdf2image.convert_from_path(file_path)
                     result["pages"] = [
                         {
@@ -161,16 +211,18 @@ class DocumentExtractionService:
                         }
                         for i, img in enumerate(images)
                     ]
-                    result["status"] = "success"
-                    result["extraction_method"] = "image_conversion"
-                    result["note"] = "PDF converted to images. Text extraction requires OCR."
+                    result["status"] = "partial"
+                    result["extraction_method"] = "pdf2image_only"
+                    result["message"] = "PDF converted to images but no OCR engine available. Install doctr or enable pytesseract."
+                    logger.warning(f"PDF extracted as images only (no OCR): {Path(file_path).name}")
                     return result
                 except Exception as e:
-                    logger.warning(f"PDF image conversion failed: {e}")
+                    logger.error(f"pdf2image fallback failed: {e}")
 
-            # Final fallback
-            result["status"] = "partial"
-            result["message"] = "Could not fully extract PDF. Install 'doctr' and 'pdf2image' for better results."
+            # No OCR method available
+            result["status"] = "error"
+            result["message"] = "No OCR method available. Install python-doctr or pytesseract."
+            logger.error(f"Cannot extract PDF: {Path(file_path).name} - No OCR method available")
             return result
 
         except Exception as e:
@@ -376,6 +428,78 @@ class DocumentExtractionService:
                 "status": "error",
                 "error": str(e)
             }
+
+    def extract_from_image(self, file_path: str) -> Dict[str, Any]:
+        """
+        Extract text from image files using doctr (primary) or pytesseract (fallback).
+        Uses doctr for best accuracy when available.
+        """
+        try:
+            result = {
+                "file_type": "image",
+                "filename": Path(file_path).name,
+                "full_text": "",
+                "status": "error"
+            }
+
+            # PRIMARY: Use doctr OCR for best accuracy
+            if HAS_DOCTR:
+                try:
+                    logger.info(f"Using doctr OCR for image: {Path(file_path).name}")
+                    ocr_model = self.get_ocr_model()
+                    if ocr_model:
+                        doc = DocumentFile.from_images(file_path)
+                        ocr_result = ocr_model(doc)
+                        
+                        full_text = ""
+                        for page in ocr_result.pages:
+                            for block in page.blocks:
+                                for line in block.lines:
+                                    for word in line.words:
+                                        full_text += word.value + " "
+                        
+                        result["full_text"] = full_text.strip()
+                        result["status"] = "success"
+                        result["extraction_method"] = "doctr_ocr"
+                        logger.info(f"✓ Successfully extracted image using doctr: {Path(file_path).name}")
+                        return result
+                except Exception as e:
+                    logger.error(f"doctr OCR extraction failed for image: {e}")
+                    # Continue to fallback
+
+            # FALLBACK: pytesseract
+            if HAS_PYTESSERACT:
+                try:
+                    logger.info(f"Falling back to pytesseract for image: {Path(file_path).name}")
+                    img = Image.open(file_path)
+                    text = pytesseract.image_to_string(img)
+                    result["full_text"] = text.strip()
+                    result["status"] = "success"
+                    result["extraction_method"] = "pytesseract_fallback"
+                    logger.info(f"✓ Successfully extracted image using pytesseract: {Path(file_path).name}")
+                    return result
+                except Exception as e:
+                    logger.error(f"pytesseract image fallback failed: {e}")
+
+            # No OCR method available
+            result["status"] = "error"
+            result["message"] = "No OCR method available. Install python-doctr or pytesseract."
+            logger.error(f"Cannot extract image: {Path(file_path).name} - No OCR method available")
+            return result
+
+        except Exception as e:
+            logger.error(f"Error extracting image: {e}")
+            return {
+                "file_type": "image",
+                "filename": Path(file_path).name,
+                "status": "error",
+                "error": str(e)
+            }
+
+    def ocr_image_fallback(self, file_path: str) -> Optional[Dict[str, Any]]:
+        """Deprecated: Use extract_from_image instead. Fallback OCR for image files using pytesseract."""
+        # This method is kept for backward compatibility but is no longer the primary path
+        return self.extract_from_image(file_path)
 
 
 # Create a singleton instance

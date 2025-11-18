@@ -51,6 +51,13 @@
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
   margin-bottom: 2rem;
   border: 1px solid #e8f4ff;
+  transition: all 0.3s ease;
+}
+
+.upload-section-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  background: #f9f9f9;
 }
 
 .upload-section-title {
@@ -127,6 +134,33 @@
 .upload-file-input {
   padding: 10px;
   cursor: pointer;
+}
+
+/* Tender Display (when auto-linked) */
+.upload-tender-display {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1.5rem;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.upload-tender-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  flex: 1;
+}
+
+.upload-tender-id {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  white-space: nowrap;
 }
 
 /* Button styles */
@@ -206,6 +240,32 @@
   content: "ℹ";
   font-weight: bold;
   font-size: 16px;
+}
+
+/* Info message for disabled state */
+.upload-info-message {
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.95rem;
+}
+
+.upload-info-warning {
+  background: #fff3cd;
+  border: 1px solid #ffc107;
+  color: #856404;
+}
+
+.upload-info-icon {
+  font-size: 1.2rem;
+  min-width: 24px;
+}
+
+.upload-info-text {
+  flex: 1;
 }
 
 /* File list */

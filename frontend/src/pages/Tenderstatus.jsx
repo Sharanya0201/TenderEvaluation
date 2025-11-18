@@ -178,12 +178,14 @@ const TenderStatus = () => {
   const loadTenders = async () => {
     setLoading(true);
     try {
-      const data = await getTenders();
-      if (Array.isArray(data)) {
-        setAllTenders(data);
-        setTenders(data);
+      const response = await getTenders();
+      // The API returns { success, total, skip, limit, tenders: [...] }
+      const tendersList = response?.tenders || [];
+      if (Array.isArray(tendersList)) {
+        setAllTenders(tendersList);
+        setTenders(tendersList);
         // Extract unique tenders for dropdown
-        const uniqueTenders = [...new Set(data.filter(t => t.tender).map(t => t.tender))].sort();
+        const uniqueTenders = [...new Set(tendersList.filter(t => t.title).map(t => t.title))].sort();
         setAvailableTitles(uniqueTenders);
       } else {
         setAllTenders([]);
@@ -235,20 +237,19 @@ const TenderStatus = () => {
     // Global search filter
     const globalSearchMatch = 
       searchTerm === "" ||
-      (tender.id?.toString() || "").includes(searchTerm) ||
-      (tender.tender?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (tender.description?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (tender.tender_type_code?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (tender.tenderid?.toString() || "").includes(searchTerm) ||
+      (tender.title?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (tender.filename?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
       (tender.status?.toLowerCase() || "").includes(searchTerm.toLowerCase());
 
     // Column-wise filters
     const idMatch = 
       columnFilters.id === "" ||
-      (tender.id?.toString() || "").includes(columnFilters.id);
+      (tender.tenderid?.toString() || "").includes(columnFilters.id);
 
     const titleMatch = 
       columnFilters.title === "" ||
-      (tender.tender?.toLowerCase() || "").includes(columnFilters.title.toLowerCase());
+      (tender.title?.toLowerCase() || "").includes(columnFilters.title.toLowerCase());
 
     const statusMatch = 
       columnFilters.status === "" ||
@@ -256,7 +257,7 @@ const TenderStatus = () => {
 
     const dateMatch = 
       columnFilters.created_at === "" ||
-      formatDate(tender.created_at).includes(columnFilters.created_at);
+      formatDate(tender.createddate).includes(columnFilters.created_at);
 
     return globalSearchMatch && idMatch && titleMatch && statusMatch && dateMatch;
   });
@@ -270,29 +271,25 @@ const TenderStatus = () => {
   const hasActiveFilters = searchTerm !== "" || Object.values(columnFilters).some(filter => filter !== "");
 
   const handleEdit = async (tender) => {
-    try {
-      const tenderData = await getTender(tender.id);
-      setEditingTender(tenderData);
-      setEditForm({
-        tender: tenderData.tender || '',
-        description: tenderData.description || '',
-        status: tenderData.status || 'Draft'
-      });
-    } catch (error) {
-      toast.error('Failed to load tender details');
-    }
+    // Use the tender data directly without fetching again since we already have it
+    setEditingTender(tender);
+    setEditForm({
+      tender: tender.title || '',
+      description: tender.filename || '',
+      status: tender.status || 'Draft'
+    });
   };
 
   const handleSaveEdit = async () => {
     if (!editingTender) return;
     
     try {
-      // Keep the existing tender name and type, only update description and status
+      // The API expects title and status as form data
       const updateData = {
-        description: editForm.description,
+        title: editForm.tender,
         status: editForm.status
       };
-      await updateTender(editingTender.id, updateData);
+      await updateTender(editingTender.tenderid, updateData);
       toast.success('Tender updated successfully');
       setEditingTender(null);
       loadTenders();
@@ -316,7 +313,8 @@ const TenderStatus = () => {
     }
 
     try {
-      await deleteTender(tender.id);
+      // Use tenderid for deletion
+      await deleteTender(tender.tenderid);
       toast.success('Tender deleted successfully');
       loadTenders();
     } catch (error) {
@@ -369,11 +367,11 @@ const TenderStatus = () => {
     setExportLoading(true);
     try {
       const dataToExport = filteredTenders.map(tender => ({
-        'ID': tender.id || '',
-        'Tender': tender.tender || '',
-        'Description': tender.description || '',
+        'ID': tender.tenderid || '',
+        'Title': tender.title || '',
+        'Filename': tender.filename || '',
         'Status': tender.status || 'Draft',
-        'Created Date': formatDate(tender.created_at),
+        'Created Date': formatDate(tender.createddate),
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -382,8 +380,8 @@ const TenderStatus = () => {
       
       const colWidths = [
         { wch: 8 },  // ID
-        { wch: 25 }, // Tender
-        { wch: 40 }, // Description
+        { wch: 25 }, // Title
+        { wch: 40 }, // Filename
         { wch: 15 }, // Status
         { wch: 15 }, // Created Date
       ];
@@ -472,13 +470,13 @@ const TenderStatus = () => {
           doc.rect(14, currentY - 4, 115, 8, 'F');
         }
 
-        doc.text((tender.id || 'N/A').toString(), 16, currentY);
+        doc.text((tender.tenderid || 'N/A').toString(), 16, currentY);
         
-        const tenderText = tender.tender || 'N/A';
+        const tenderText = tender.title || 'N/A';
         doc.text(tenderText.length > 25 ? tenderText.substring(0, 22) + '...' : tenderText, 31, currentY);
         
         doc.text(tender.status || 'Draft', 71, currentY);
-        doc.text(formatDate(tender.created_at), 106, currentY);
+        doc.text(formatDate(tender.createddate), 106, currentY);
         
         currentY += 10;
       });
@@ -753,13 +751,13 @@ const TenderStatus = () => {
                   {currentTenders.length > 0 ? (
                     currentTenders.map((tender) => {
                       return (
-                        <tr key={tender.id}>
-                          <td>{tender.id}</td>
+                        <tr key={tender.tenderid}>
+                          <td>{tender.tenderid}</td>
                           <td className="role-name-cell">
                             <div className="role-avatar">
-                              {(tender.tender?.charAt(0).toUpperCase() || 'T')}
+                              {(tender.title?.charAt(0).toUpperCase() || 'T')}
                             </div>
-                            {tender.tender || 'N/A'}
+                            {tender.title || 'N/A'}
                           </td>
                           <td>
                             <span className={getStatusBadgeClass(tender.status)}>
@@ -767,7 +765,7 @@ const TenderStatus = () => {
                             </span>
                           </td>
                           <td>
-                            {formatDate(tender.created_at)}
+                            {formatDate(tender.createddate)}
                           </td>
                           <td>
                             <div className="action-buttons">
@@ -854,7 +852,7 @@ const TenderStatus = () => {
         {confirmDialog.isOpen && (
           <ConfirmDialog
             title="Confirm Delete"
-            message={`Are you sure you want to delete tender "${confirmDialog.tender?.tender || confirmDialog.tender?.id}"? This action cannot be undone.`}
+            message={`Are you sure you want to delete tender "${confirmDialog.tender?.title || confirmDialog.tender?.tenderid}"? This action cannot be undone.`}
             onConfirm={confirmDelete}
             onCancel={cancelDelete}
           />

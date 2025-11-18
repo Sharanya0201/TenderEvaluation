@@ -57,6 +57,7 @@ class TenderAttachment(Base):
     uploadedby = Column(String(150), nullable=False)
     createddate = Column(DateTime(timezone=True), server_default=func.now())
     status = Column(String(50), default="Active")
+    form_data = Column(JSON, nullable=True, default={})  # OCR-extracted document data as JSON
 
     tender = relationship("Tender", back_populates="attachments")
 
@@ -74,6 +75,7 @@ class VendorAttachment(Base):
     uploadedby = Column(String(150), nullable=False)
     createddate = Column(DateTime(timezone=True), server_default=func.now())
     status = Column(String(50), default="Active")
+    form_data = Column(JSON, nullable=True, default={})  # OCR-extracted document data as JSON
 
     vendor = relationship("Vendor", back_populates="attachments")
 
