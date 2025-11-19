@@ -12,6 +12,8 @@ import shutil
 import json
 import logging
 from typing import List, Optional
+from fastapi.encoders import jsonable_encoder
+
 
 # Add these imports with your existing imports
 from app.models.user import User, Role, TenderType, EvaluationCriterion
@@ -541,18 +543,22 @@ def upload_vendors(
             # Extract data from document
             try:
                 logger.info(f"Extracting data from vendor file: {filename}")
-                form_data = extraction_service.extract_from_file(dest_path)
+                raw_form_data = extraction_service.extract_from_file(dest_path)
+                sanitized_form_data = jsonable_encoder(raw_form_data)
                 # Save extracted data to the attachment record, not the vendor record
-                vendor_attachment.form_data = form_data
+                vendor_attachment.form_data = sanitized_form_data
+                vendor.form_data = sanitized_form_data
                 logger.info(f"Successfully extracted data from {filename}")
             except Exception as extract_err:
                 logger.warning(f"Error extracting data from {filename}: {extract_err}")
-                form_data = {
+                fallback_form_data = {
                     "status": "extraction_failed",
                     "error": str(extract_err),
                     "filename": filename
                 }
-                vendor_attachment.form_data = form_data
+                sanitized_form_data = jsonable_encoder(fallback_form_data)
+                vendor_attachment.form_data = sanitized_form_data
+                vendor.form_data = sanitized_form_data
 
             db.flush()
             
@@ -577,6 +583,7 @@ def upload_vendors(
         db.rollback()
         logger.error(f"Unexpected error in upload_vendors: {e}")
         raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
+
 
 
 @router.get("/upload/vendors/list/{tenderid}")

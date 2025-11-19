@@ -1,4 +1,6 @@
 # app/main.py
+from pathlib import Path
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.db.database import Base, engine
@@ -7,6 +9,14 @@ from app.api.v1 import routes_auth
 from app.models.user import TenderType  # Import models to trigger table creation (keeps metadata available)
 from app.models.upload_models import Tender, Vendor, TenderAttachment, VendorAttachment  # Import attachment models
 from sqlalchemy import text
+
+
+
+
+
+app = FastAPI(title="AI Based Tender Evaluation")
+
+
 
 # Create tables (ensure SQLAlchemy models are imported before this runs)
 Base.metadata.create_all(bind=engine)
@@ -23,6 +33,50 @@ with engine.begin() as conn:
                 WHERE table_name='tenders' AND column_name='form_data'
             ) THEN
                 ALTER TABLE tenders ADD COLUMN form_data JSON NOT NULL DEFAULT '{}'::json;
+            END IF;
+        END;
+        $$;
+        """
+    ))
+
+    # Ensure tenderattachments has form_data column
+    conn.execute(text(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_name='tenderattachments'
+            ) THEN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='tenderattachments' AND column_name='form_data'
+                ) THEN
+                    ALTER TABLE tenderattachments ADD COLUMN form_data JSON DEFAULT '{}'::json;
+                    UPDATE tenderattachments SET form_data='{}'::json WHERE form_data IS NULL;
+                END IF;
+            END IF;
+        END;
+        $$;
+        """
+    ))
+
+    # Ensure vendorattachments has form_data column
+    conn.execute(text(
+        """
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM information_schema.tables
+                WHERE table_name='vendorattachments'
+            ) THEN
+                IF NOT EXISTS (
+                    SELECT 1 FROM information_schema.columns
+                    WHERE table_name='vendorattachments' AND column_name='form_data'
+                ) THEN
+                    ALTER TABLE vendorattachments ADD COLUMN form_data JSON DEFAULT '{}'::json;
+                    UPDATE vendorattachments SET form_data='{}'::json WHERE form_data IS NULL;
+                END IF;
             END IF;
         END;
         $$;
@@ -157,6 +211,7 @@ with engine.begin() as conn:
                     uploadedby VARCHAR(150) NOT NULL,
                     createddate TIMESTAMP DEFAULT NOW(),
                     status VARCHAR(50) DEFAULT 'Active',
+                    form_data JSON DEFAULT '{}'::json,
                     CONSTRAINT fk_tender_attachments
                         FOREIGN KEY (tenderid)
                         REFERENCES tenders (tenderid)
@@ -186,6 +241,7 @@ with engine.begin() as conn:
                     uploadedby VARCHAR(150) NOT NULL,
                     createddate TIMESTAMP DEFAULT NOW(),
                     status VARCHAR(50) DEFAULT 'Active',
+                    form_data JSON DEFAULT '{}'::json,
                     CONSTRAINT fk_vendor_attachments
                         FOREIGN KEY (vendorid)
                         REFERENCES vendors (vendorid)
@@ -199,7 +255,7 @@ with engine.begin() as conn:
     ))
 
 
-app = FastAPI(title="AI Based Tender Evaluation")
+
 
 # Allowed origins (frontend URLs)
 origins = [
@@ -228,3 +284,6 @@ app.include_router(routes_auth.router, prefix="/api/v1", tags=["API"])
 @app.get("/")
 def root():
     return {"message": "Backend running 🚀"}
+
+
+
