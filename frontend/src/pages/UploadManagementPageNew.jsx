@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
-import Sidebar from "./Sidebar";
 import "../styles/UploadManagementNew.css";
 
 const API_BASE_URL =
@@ -385,7 +384,7 @@ export default function UploadManagementPage() {
   if (loading) {
     return (
       <div className="um-container">
-        <Sidebar />
+   
         <div className={`um-main-content ${isCollapsed ? "um-collapsed" : ""}`}>
           <div className="um-loading">Loading...</div>
         </div>
@@ -397,7 +396,7 @@ export default function UploadManagementPage() {
 
   return (
     <div className="um-container">
-      <Sidebar />
+
       <div className={`um-main-content ${isCollapsed ? "um-collapsed" : ""}`}>
         {/* Header */}
         <div className="um-header">

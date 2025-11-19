@@ -2,7 +2,6 @@
 import React, { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext"; // Import the hook
-import Sidebar from "./Sidebar";
 import LogoutButton from "../components/LogoutButton";
 import {
   BarChart,
@@ -136,8 +135,6 @@ export default function Dashboard() {
       margin: 0,
       padding: 0 
     }}>
-      {/* --- Fixed Sidebar --- */}
-      <Sidebar />
 
       {/* --- Main Content Area - Dynamic based on sidebar state --- */}
       <div style={{

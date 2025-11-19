@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
-import Sidebar from "./Sidebar";
 import "../styles/UploadPage.css";
 
 // Vite-friendly API base (use .env VITE_API_BASE), fallback to http://localhost:8000
@@ -236,8 +235,7 @@ export default function UploadPage() {
       margin: 0,
       padding: 0 
     }}>
-      {/* Sidebar */}
-      <Sidebar />
+
       
       {/* Main Content Area */}
       <div 
