@@ -1,7 +1,7 @@
 // src/pages/Dashboard.jsx
-import React, { useContext } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { useSidebar } from "../context/SidebarContext"; // Import the hook
+import { useSidebar } from "../context/SidebarContext";
 import LogoutButton from "../components/LogoutButton";
 import {
   BarChart,
@@ -16,43 +16,68 @@ import {
   Pie,
   Cell
 } from "recharts";
-
-const mockData = {
-  stats: {
-    tenders: 124,
-    vendors: 89,
-    users: 42,
-    evaluations: 567
-  },
-  tenderStatus: [
-    { name: "Draft", value: 15 },
-    { name: "Open", value: 45 },
-    { name: "Evaluation", value: 32 },
-    { name: "Awarded", value: 20 },
-    { name: "Closed", value: 12 }
-  ],
-  monthlyEvaluations: [
-    { month: "Jan", evaluations: 45, tenders: 12 },
-    { month: "Feb", evaluations: 78, tenders: 18 },
-    { month: "Mar", evaluations: 92, tenders: 22 },
-    { month: "Apr", evaluations: 65, tenders: 15 },
-    { month: "May", evaluations: 110, tenders: 28 },
-    { month: "Jun", evaluations: 85, tenders: 20 }
-  ],
-  vendorPerformance: [
-    { name: "Vendor A", score: 92, tenders: 8 },
-    { name: "Vendor B", score: 87, tenders: 12 },
-    { name: "Vendor C", score: 95, tenders: 6 },
-    { name: "Vendor D", score: 78, tenders: 15 },
-    { name: "Vendor E", score: 88, tenders: 9 }
-  ]
-};
+import {
+  getDashboardStats,
+  getTenderStatusDistribution,
+  getMonthlyEvaluations,
+  getVendorPerformance
+} from "../api/auth";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
 
 export default function Dashboard() {
   const { user } = useContext(AuthContext);
-  const { isCollapsed } = useSidebar(); // Use the context
+  const { isCollapsed } = useSidebar();
+  
+  const [dashboardData, setDashboardData] = useState({
+    stats: {
+      tenders: 0,
+      vendors: 0,
+      users: 0,
+      evaluations: 0
+    },
+    tenderStatus: [],
+    monthlyEvaluations: [],
+    vendorPerformance: []
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Fetch all dashboard data in parallel
+      const [statsResponse, statusResponse, monthlyResponse, performanceResponse] = await Promise.all([
+        getDashboardStats(),
+        getTenderStatusDistribution(),
+        getMonthlyEvaluations(),
+        getVendorPerformance()
+      ]);
+
+      if (statsResponse.success && statusResponse.success && monthlyResponse.success && performanceResponse.success) {
+        setDashboardData({
+          stats: statsResponse.stats,
+          tenderStatus: statusResponse.distribution,
+          monthlyEvaluations: monthlyResponse.data,
+          vendorPerformance: performanceResponse.data
+        });
+      } else {
+        throw new Error('Failed to load dashboard data');
+      }
+    } catch (err) {
+      console.error('Error loading dashboard data:', err);
+      setError(err.message);
+      // You can set fallback mock data here if needed
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const StatCard = ({ title, value, icon, color, description }) => (
     <div style={{
@@ -84,7 +109,7 @@ export default function Dashboard() {
             fontWeight: "bold",
             color: "#333"
           }}>
-            {value}
+            {loading ? "..." : value}
           </h3>
           <p style={{ 
             margin: "0.25rem 0 0 0", 
@@ -123,9 +148,64 @@ export default function Dashboard() {
       }}>
         {title}
       </h3>
-      {children}
+      {loading ? (
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "center", 
+          alignItems: "center", 
+          height: "100%",
+          color: "#666"
+        }}>
+          Loading chart data...
+        </div>
+      ) : (
+        children
+      )}
     </div>
   );
+
+  if (error) {
+    return (
+      <div style={{ 
+        flex: 1,
+        padding: "2rem",
+        backgroundColor: "#f5f7fa",
+        marginLeft: isCollapsed ? "80px" : "280px",
+        minHeight: "100vh",
+        width: isCollapsed ? "calc(100vw - 80px)" : "calc(100vw - 280px)",
+        transition: "all 0.3s ease",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center"
+      }}>
+        <div style={{ 
+          background: "white", 
+          padding: "2rem", 
+          borderRadius: "12px", 
+          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+          textAlign: "center"
+        }}>
+          <h2 style={{ color: "#e74c3c" }}>Error Loading Dashboard</h2>
+          <p>{error}</p>
+          <button 
+            onClick={loadDashboardData}
+            style={{
+              background: "#3498db",
+              color: "white",
+              border: "none",
+              padding: "0.5rem 1rem",
+              borderRadius: "6px",
+              cursor: "pointer",
+              marginTop: "1rem"
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ 
@@ -136,16 +216,16 @@ export default function Dashboard() {
       padding: 0 
     }}>
 
-      {/* --- Main Content Area - Dynamic based on sidebar state --- */}
+      {/* Main Content Area */}
       <div style={{
         flex: 1,
         padding: "2rem",
         backgroundColor: "#f5f7fa",
         color: "#333",
-        marginLeft: isCollapsed ? "80px" : "280px", // Dynamic margin from context
+        marginLeft: isCollapsed ? "80px" : "280px",
         minHeight: "100vh",
-        width: isCollapsed ? "calc(100vw - 80px)" : "calc(100vw - 280px)", // Dynamic width from context
-        transition: "all 0.3s ease" // Smooth transition
+        width: isCollapsed ? "calc(100vw - 80px)" : "calc(100vw - 280px)",
+        transition: "all 0.3s ease"
       }}>
         {/* Header */}
         <div style={{
@@ -168,13 +248,25 @@ export default function Dashboard() {
               color: "#7f8c8d",
               fontSize: "1rem"
             }}>
-              Here's what's happening with your tenders today
+              {loading ? "Loading dashboard data..." : "Here's what's happening with your tenders today"}
             </p>
           </div>
-          <LogoutButton />
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            {loading && (
+              <div style={{ 
+                padding: "0.5rem 1rem", 
+                background: "#3498db", 
+                color: "white", 
+                borderRadius: "6px",
+                fontSize: "0.9rem"
+              }}>
+                Loading...
+              </div>
+            )}
+            <LogoutButton />
+          </div>
         </div>
 
-        {/* Rest of your dashboard content remains the same */}
         {/* Stats Grid */}
         <div style={{
           display: "grid",
@@ -184,31 +276,31 @@ export default function Dashboard() {
         }}>
           <StatCard
             title="Total Tenders"
-            value={mockData.stats.tenders}
+            value={dashboardData.stats.tenders}
             icon="📋"
             color="#3498db"
             description="Active and completed"
           />
           <StatCard
             title="Vendors"
-            value={mockData.stats.vendors}
+            value={dashboardData.stats.vendors}
             icon="🏢"
             color="#2ecc71"
             description="Registered vendors"
           />
           <StatCard
             title="Users"
-            value={mockData.stats.users}
+            value={dashboardData.stats.users}
             icon="👥"
             color="#9b59b6"
             description="System users"
           />
           <StatCard
             title="Evaluations"
-            value={mockData.stats.evaluations}
+            value={dashboardData.stats.evaluations}
             icon="🤖"
             color="#e74c3c"
-            description="AI processed"
+            description="Documents processed"
           />
         </div>
 
@@ -221,56 +313,92 @@ export default function Dashboard() {
         }}>
           {/* Tender Status Chart */}
           <ChartCard title="Tender Status Distribution">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={mockData.tenderStatus}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(0)}%)`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {mockData.tenderStatus.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
+            {dashboardData.tenderStatus.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={dashboardData.tenderStatus}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name} (${value})`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {dashboardData.tenderStatus.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center", 
+                height: "100%",
+                color: "#666"
+              }}>
+                No tender status data available
+              </div>
+            )}
           </ChartCard>
 
           {/* Monthly Evaluations Chart */}
-          <ChartCard title="Monthly Evaluations & Tenders">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={mockData.monthlyEvaluations}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="evaluations" fill="#8884d8" name="AI Evaluations" />
-                <Bar dataKey="tenders" fill="#82ca9d" name="New Tenders" />
-              </BarChart>
-            </ResponsiveContainer>
+          <ChartCard title="Monthly Activity">
+            {dashboardData.monthlyEvaluations.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={dashboardData.monthlyEvaluations}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="month" />
+                  <YAxis />
+                  <Tooltip />
+                  <Legend />
+                  <Bar dataKey="evaluations" fill="#8884d8" name="Documents Processed" />
+                  <Bar dataKey="tenders" fill="#82ca9d" name="New Tenders" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div style={{ 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center", 
+                height: "100%",
+                color: "#666"
+              }}>
+                No monthly data available
+              </div>
+            )}
           </ChartCard>
         </div>
 
         {/* Vendor Performance */}
-        <ChartCard title="Top Vendor Performance">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={mockData.vendorPerformance}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="score" fill="#ffc658" name="Performance Score" />
-              <Bar dataKey="tenders" fill="#ff7300" name="Tenders Participated" />
-            </BarChart>
-          </ResponsiveContainer>
+        <ChartCard title="Top Vendor Activity">
+          {dashboardData.vendorPerformance.length > 0 ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dashboardData.vendorPerformance}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="score" fill="#ffc658" name="Activity Score" />
+                <Bar dataKey="tenders" fill="#ff7300" name="Tenders Participated" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div style={{ 
+              display: "flex", 
+              justifyContent: "center", 
+              alignItems: "center", 
+              height: "100%",
+              color: "#666"
+            }}>
+              No vendor performance data available
+            </div>
+          )}
         </ChartCard>
       </div>
     </div>

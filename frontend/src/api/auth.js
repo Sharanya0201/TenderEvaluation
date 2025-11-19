@@ -318,7 +318,25 @@ export const restoreDefaultCriteria = async () => {
 };
 
 
+// Add these to your existing auth.js file
 
+// ------------------------------ DASHBOARD APIs ------------------------------
+
+export const getDashboardStats = async () => {
+  return apiGet('/api/v1/auth/dashboard/stats');
+};
+
+export const getTenderStatusDistribution = async () => {
+  return apiGet('/api/v1/auth/dashboard/tender-status');
+};
+
+export const getMonthlyEvaluations = async () => {
+  return apiGet('/api/v1/auth/dashboard/monthly-evaluations');
+};
+
+export const getVendorPerformance = async () => {
+  return apiGet('/api/v1/auth/dashboard/vendor-performance');
+};
 
 
 
