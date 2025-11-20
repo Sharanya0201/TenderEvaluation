@@ -320,144 +320,65 @@ os.makedirs(TENDER_UPLOAD_DIR, exist_ok=True)
 os.makedirs(VENDORS_UPLOAD_DIR, exist_ok=True)
 
 
-@router.post("/upload/tender")
-def upload_tender(
-    title: Optional[str] = Form(None),
-    tenderform: Optional[str] = Form(None),
-    tenderid: Optional[int] = Form(None),  # Optional: if provided, attach to existing tender
-    uploadedby: Optional[str] = Form(None),
-    file: Optional[UploadFile] = File(None),
-    db: Session = Depends(get_db),
-    current_user = Depends(get_current_user_dep) if get_current_user_dep else None,
+@router.get("/uploads/tenders")
+def get_all_tenders(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    tenderid: int = Query(None),
+    db: Session = Depends(get_db)
 ):
-    """
-    Upload tender file(s) with automatic data extraction.
-    
-    Two modes:
-    1. Create new tender: Provide 'title' (tenderid will be auto-generated)
-    2. Attach to existing tender: Provide 'tenderid' (will skip title requirement)
-    
-    Extracts data from PDF, Excel, DOCX, PPTX documents and saves as JSON in form_data field.
-    Saves file path in tenderattachments table.
-    """
-    # Determine uploader
-    uploader_str = None
-    if current_user:
-        uploader_str = getattr(current_user, "username", None) or getattr(current_user, "email", None) or str(getattr(current_user, "id", "user"))
-    else:
-        if not uploadedby:
-            raise HTTPException(status_code=400, detail="uploadedby is required")
-        uploader_str = uploadedby
-
+    """Get list of tender attachments with optional filtering by tenderid"""
     try:
-        tender = None
-        
-        # Case 1: Attach to existing tender
+        from app.models.upload_models import TenderAttachment
+
+        attachment_query = (
+            db.query(TenderAttachment, Tender)
+            .outerjoin(Tender, Tender.tenderid == TenderAttachment.tenderid)
+        )
+
         if tenderid:
-            tender = db.query(Tender).filter(Tender.tenderid == tenderid).first()
-            if not tender:
-                raise HTTPException(status_code=404, detail=f"Tender with ID {tenderid} not found")
-        
-        # Case 2: Create new tender
-        else:
-            if not title:
-                raise HTTPException(status_code=400, detail="title is required when creating new tender")
-            
-            tender = Tender(
-                title=title,
-                tenderform=tenderform,
-                uploadedby=uploader_str,
-                form_data={},  # Initialize empty form_data
+            attachment_query = attachment_query.filter(TenderAttachment.tenderid == tenderid)
+
+        total = attachment_query.count()
+        rows = attachment_query.offset(skip).limit(limit).all()
+
+        def _serialize_attachment(attachment, tender_obj):
+            tender_status = (tender_obj.status if tender_obj and tender_obj.status else attachment.status)
+            tender_title = (tender_obj.title if tender_obj and tender_obj.title else attachment.filename)
+            tender_created = (
+                tender_obj.createddate if tender_obj and tender_obj.createddate else attachment.createddate
             )
-            db.add(tender)
-            db.flush()  # get tender.tenderid
 
-        filepath = None
-        filename = None
-        form_data = {}
-
-        if file:
-            filename = file.filename
-            # Sanitize filename
-            # Normalize and sanitize incoming filename to avoid directory traversal
-            raw_name = filename.replace('\\', '/').lstrip('/')
-            base_name = os.path.basename(raw_name)
-            safe_name = f"{tender.tenderid}_{base_name.replace(' ', '_')}"
-            dest_path = os.path.join(TENDER_UPLOAD_DIR, safe_name)
-
-            # Ensure parent directory exists (defensive)
-            os.makedirs(os.path.dirname(dest_path) or TENDER_UPLOAD_DIR, exist_ok=True)
-
-            # Save file to disk
-            with open(dest_path, "wb") as buffer:
-                shutil.copyfileobj(file.file, buffer)
-            
-            filepath = dest_path
-            tender.filepath = filepath
-            tender.filename = filename
-
-            # Create attachment record in tenderattachments table
-            attachment = TenderAttachment(
-                tenderid=tender.tenderid,
-                filename=filename,
-                filepath=filepath,
-                uploadedby=uploader_str,
-                status="Active"
-            )
-            db.add(attachment)
-
-            # Extract data from document
-            try:
-                logger.info(f"Extracting data from tender file: {filename}")
-                form_data = extraction_service.extract_from_file(dest_path)
-                # Save extracted data to the attachment record, not the tender record
-                attachment.form_data = form_data
-                logger.info(f"Successfully extracted data from {filename}")
-            except Exception as extract_err:
-                logger.warning(f"Error extracting data from {filename}: {extract_err}")
-                form_data = {
-                    "status": "extraction_failed",
-                    "error": str(extract_err),
-                    "filename": filename
-                }
-                attachment.form_data = form_data
-
-        db.commit()
-        db.refresh(tender)
-
-        # Build attachment info for response
-        attachment_info = None
-        if file:
-            attachment_info = {
-                "filename": filename,
-                "filepath": filepath,
+            return {
+                "tenderid": attachment.tenderattachmentsid,
+                "tenderid_fk": attachment.tenderid,
+                "title": tender_title,
+                "filename": attachment.filename,
+                "filepath": attachment.filepath,
+                "status": tender_status,
+                "attachment_status": attachment.status,
+                "uploadedby": attachment.uploadedby,
+                "createddate": tender_created.isoformat() if tender_created else None,
                 "form_data": attachment.form_data or {},
-                "form_data_status": attachment.form_data.get("status", "success") if attachment.form_data else "no_file"
             }
 
         return {
             "success": True,
-            "tender": {
-                "tenderid": tender.tenderid,
-                "title": tender.title,
-                "filename": tender.filename,
-                "filepath": tender.filepath,
-                "form_data": tender.form_data,  # Keep for backward compatibility
-                "status": tender.status,
-                "uploadedby": tender.uploadedby,
-                "createddate": tender.createddate.isoformat() if tender.createddate else None,
-            },
-            "attachment": attachment_info,
-            "mode": "created" if not tenderid else "attached"
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "tenders": [
+                _serialize_attachment(attachment, tender_obj)
+                for attachment, tender_obj in rows
+            ],
         }
-    except SQLAlchemyError as e:
-        db.rollback()
-        logger.error(f"Database error in upload_tender: {e}")
-        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
     except Exception as e:
-        db.rollback()
-        logger.error(f"Unexpected error in upload_tender: {e}")
-        raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
+        logger.error(f"Error fetching tenders: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching tenders: {str(e)}")
+
+
+
+
 
 
 @router.post("/upload/vendors")
