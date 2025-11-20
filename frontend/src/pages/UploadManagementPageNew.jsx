@@ -12,14 +12,42 @@ const UploadModal = ({ selectedId, docType, onUpload, onCancel, loading }) => {
   // file may be a single File (tender) or an array of Files (vendor folder)
   const [file, setFile] = useState(null);
   const [title, setTitle] = useState("");
+  const [vendorFolders, setVendorFolders] = useState({}); // vendor folder structure
   const fileInputRef = React.useRef();
+
+  // Parse vendor folder structure from webkitRelativePath
+  const parseVendorFolders = (filesArray) => {
+    const folders = {};
+    filesArray.forEach((f) => {
+      const path = f.webkitRelativePath || f.name;
+      const parts = path.split('/');
+      
+      if (parts.length > 1) {
+        // Has folder structure
+        const vendorName = parts[0];
+        if (!folders[vendorName]) {
+          folders[vendorName] = [];
+        }
+        folders[vendorName].push({
+          fullPath: path,
+          fileName: parts[parts.length - 1],
+          relativePath: parts.slice(1).join('/')
+        });
+      }
+    });
+    return folders;
+  };
 
   const handleFileSelect = (e) => {
     const files = e.target.files;
     if (!files) return;
     if (docType === "vendor") {
       // store as array so we can append each file with its relative path
-      setFile(Array.from(files));
+      const filesArray = Array.from(files);
+      setFile(filesArray);
+      // Parse and display vendor folder structure
+      const folders = parseVendorFolders(filesArray);
+      setVendorFolders(folders);
     } else {
       setFile(files[0]);
     }
@@ -92,6 +120,40 @@ const UploadModal = ({ selectedId, docType, onUpload, onCancel, loading }) => {
               </p>
               <small>Supported: PDF, Excel, Word, PowerPoint, Images, Text</small>
             </div>
+
+            {/* Display vendor folder structure when files are selected */}
+            {docType === "vendor" && Object.keys(vendorFolders).length > 0 && (
+              <div className="um-vendor-folders-display">
+                <div className="um-vendor-folders-title">
+                  📁 Vendor Folders ({Object.keys(vendorFolders).length})
+                </div>
+                {Object.entries(vendorFolders).map(([vendorName, files]) => (
+                  <div key={vendorName} className="um-vendor-folder-item">
+                    <div className="um-vendor-folder-name">
+                      <span className="um-folder-icon">📦</span>
+                      <span className="um-folder-text">{vendorName}</span>
+                      <span className="um-file-count">({files.length} file{files.length !== 1 ? 's' : ''})</span>
+                    </div>
+                    <div className="um-vendor-files">
+                      {files.slice(0, 5).map((file, idx) => (
+                        <div key={idx} className="um-vendor-file-item">
+                          <span className="um-file-icon">📄</span>
+                          <span className="um-file-path">{file.relativePath}</span>
+                        </div>
+                      ))}
+                      {files.length > 5 && (
+                        <div className="um-vendor-file-more">
+                          ... and {files.length - 5} more file(s)
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div className="um-vendor-folders-note">
+                  ℹ️ Each vendor folder's documents will be processed with OCR and data will be extracted
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="um-modal-footer">
