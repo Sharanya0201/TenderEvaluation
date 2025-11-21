@@ -365,20 +365,25 @@ def upload_tender(
     db: Session = Depends(get_db),
     current_user = Depends(get_current_user_dep) if get_current_user_dep else None,
 ):
+    """Upload tender file(s) with automatic data extraction.
+
+    Modes:
+    1. Create new tender: provide 'title' (tenderid auto-generated).
+    2. Attach to existing tender: provide 'tenderid'.
+
+    Each uploaded file is stored as a TenderAttachment and processed by the
+    document_extraction_service; extracted JSON is saved on the attachment's
+    form_data field (not on the Tender itself).
     """
-    Upload tender file(s) with automatic data extraction.
-    
-    Two modes:
-    1. Create new tender: Provide 'title' (tenderid will be auto-generated)
-    2. Attach to existing tender: Provide 'tenderid' (will skip title requirement)
-    
-    Extracts data from PDF, Excel, DOCX, PPTX documents and saves as JSON in form_data field.
-    Saves file path in tenderattachments table.
-    """
+
     # Determine uploader
     uploader_str = None
     if current_user:
-        uploader_str = getattr(current_user, "username", None) or getattr(current_user, "email", None) or str(getattr(current_user, "id", "user"))
+        uploader_str = (
+            getattr(current_user, "username", None)
+            or getattr(current_user, "email", None)
+            or str(getattr(current_user, "id", "user"))
+        )
     else:
         if not uploadedby:
             raise HTTPException(status_code=400, detail="uploadedby is required")
@@ -386,36 +391,43 @@ def upload_tender(
 
     try:
         tender = None
-        
-        # Case 1: Attach to existing tender
+
+        # Case 1: attach to existing tender
         if tenderid:
             tender = db.query(Tender).filter(Tender.tenderid == tenderid).first()
             if not tender:
-                raise HTTPException(status_code=404, detail=f"Tender with ID {tenderid} not found")
-        
-        # Case 2: Create new tender
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Tender with ID {tenderid} not found",
+                )
+
+        # Case 2: create new tender
         else:
             if not title:
-                raise HTTPException(status_code=400, detail="title is required when creating new tender")
-            
+                raise HTTPException(
+                    status_code=400,
+                    detail="title is required when creating new tender",
+                )
+
             tender = Tender(
                 title=title,
                 tenderform=tenderform,
                 uploadedby=uploader_str,
-                form_data={},  # Initialize empty form_data
+                form_data={},  # initialize empty form_data
             )
             db.add(tender)
-            db.flush()  # get tender.tenderid
+            db.flush()  # obtain tender.tenderid
 
         filepath = None
         filename = None
-        form_data = {}
+
+        attachment = None
 
         if file:
             filename = file.filename
-            # Sanitize filename
+
             # Normalize and sanitize incoming filename to avoid directory traversal
-            raw_name = filename.replace('\\', '/').lstrip('/')
+            raw_name = filename.replace("\\", "/").lstrip("/")
             base_name = os.path.basename(raw_name)
             safe_name = f"{tender.tenderid}_{base_name.replace(' ', '_')}"
             dest_path = os.path.join(TENDER_UPLOAD_DIR, safe_name)
@@ -426,7 +438,7 @@ def upload_tender(
             # Save file to disk
             with open(dest_path, "wb") as buffer:
                 shutil.copyfileobj(file.file, buffer)
-            
+
             filepath = dest_path
             tender.filepath = filepath
             tender.filename = filename
@@ -437,37 +449,40 @@ def upload_tender(
                 filename=filename,
                 filepath=filepath,
                 uploadedby=uploader_str,
-                status="Active"
+                status="Active",
             )
             db.add(attachment)
 
-            # Extract data from document
+            # Extract data from document and save on attachment
             try:
                 logger.info(f"Extracting data from tender file: {filename}")
                 form_data = extraction_service.extract_from_file(dest_path)
-                # Save extracted data to the attachment record, not the tender record
                 attachment.form_data = form_data
                 logger.info(f"Successfully extracted data from {filename}")
             except Exception as extract_err:
-                logger.warning(f"Error extracting data from {filename}: {extract_err}")
-                form_data = {
+                logger.warning(
+                    f"Error extracting data from {filename}: {extract_err}"
+                )
+                attachment.form_data = {
                     "status": "extraction_failed",
                     "error": str(extract_err),
-                    "filename": filename
+                    "filename": filename,
                 }
-                attachment.form_data = form_data
 
         db.commit()
         db.refresh(tender)
 
-        # Build attachment info for response
         attachment_info = None
-        if file:
+        if attachment is not None:
             attachment_info = {
-                "filename": filename,
-                "filepath": filepath,
+                "filename": attachment.filename,
+                "filepath": attachment.filepath,
                 "form_data": attachment.form_data or {},
-                "form_data_status": attachment.form_data.get("status", "success") if attachment.form_data else "no_file"
+                "form_data_status": (
+                    attachment.form_data.get("status", "success")
+                    if attachment.form_data
+                    else "no_file"
+                ),
             }
 
         return {
@@ -477,13 +492,15 @@ def upload_tender(
                 "title": tender.title,
                 "filename": tender.filename,
                 "filepath": tender.filepath,
-                "form_data": tender.form_data,  # Keep for backward compatibility
+                "form_data": tender.form_data or {},  # backward compatibility
                 "status": tender.status,
                 "uploadedby": tender.uploadedby,
-                "createddate": tender.createddate.isoformat() if tender.createddate else None,
+                "createddate": tender.createddate.isoformat()
+                if tender.createddate
+                else None,
             },
             "attachment": attachment_info,
-            "mode": "created" if not tenderid else "attached"
+            "mode": "created" if not tenderid else "attached",
         }
     except SQLAlchemyError as e:
         db.rollback()
@@ -493,6 +510,67 @@ def upload_tender(
         db.rollback()
         logger.error(f"Unexpected error in upload_tender: {e}")
         raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
+
+
+@router.get("/uploads/tenders")
+def get_all_tenders(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    tenderid: int = Query(None),
+    db: Session = Depends(get_db)
+):
+    """Get list of tender attachments with optional filtering by tenderid"""
+    try:
+        from app.models.upload_models import TenderAttachment
+
+        attachment_query = (
+            db.query(TenderAttachment, Tender)
+            .outerjoin(Tender, Tender.tenderid == TenderAttachment.tenderid)
+        )
+
+        if tenderid:
+            attachment_query = attachment_query.filter(TenderAttachment.tenderid == tenderid)
+
+        total = attachment_query.count()
+        rows = attachment_query.offset(skip).limit(limit).all()
+
+        def _serialize_attachment(attachment, tender_obj):
+            tender_status = (tender_obj.status if tender_obj and tender_obj.status else attachment.status)
+            tender_title = (tender_obj.title if tender_obj and tender_obj.title else attachment.filename)
+            tender_created = (
+                tender_obj.createddate if tender_obj and tender_obj.createddate else attachment.createddate
+            )
+
+            return {
+                "tenderid": attachment.tenderattachmentsid,
+                "tenderid_fk": attachment.tenderid,
+                "title": tender_title,
+                "filename": attachment.filename,
+                "filepath": attachment.filepath,
+                "status": tender_status,
+                "attachment_status": attachment.status,
+                "uploadedby": attachment.uploadedby,
+                "createddate": tender_created.isoformat() if tender_created else None,
+                "form_data": attachment.form_data or {},
+            }
+
+        return {
+            "success": True,
+            "total": total,
+            "skip": skip,
+            "limit": limit,
+            "tenders": [
+                _serialize_attachment(attachment, tender_obj)
+                for attachment, tender_obj in rows
+            ],
+        }
+    except Exception as e:
+        logger.error(f"Error fetching tenders: {e}")
+        raise HTTPException(status_code=500, detail=f"Error fetching tenders: {str(e)}")
+
+
+
+
 
 
 @router.post("/upload/vendors")
@@ -528,87 +606,169 @@ def upload_vendors(
     os.makedirs(tender_folder, exist_ok=True)
 
     try:
+        # Dictionary to track vendor IDs by vendor folder name
+        vendor_map = {}  # vendor_folder_name -> vendorid
+        
+        # First, normalize paths and determine at which segment the vendor folder lives,
+        # so that ALL nested subfolders under a vendor share the same vendor ID.
+        files_by_folder = {}
+        normalized_files = []  # (upload, raw_name, path_parts)
+
         for upload in files:
             filename = upload.filename
-            
-            # Create vendor record
-            vendor = Vendor(
-                tenderid=tenderid,
-                vendorform=vendorform,
-                uploadedby=uploader_str,
-                form_data={},  # Initialize empty form_data
-            )
-            db.add(vendor)
-            db.flush()  # get vendor.vendorid
 
-            # Save file to disk
-            # Allow relative paths from webkitRelativePath, but create parent dirs and sanitize
-            raw_name = filename.replace('\\', '/').lstrip('/')
-            # Reject upward traversal; if present, fall back to basename
-            norm = os.path.normpath(raw_name)
-            if norm.startswith('..') or os.path.isabs(norm):
-                rel_name = os.path.basename(raw_name)
+            # Get the relative path from the client (webkitRelativePath when available)
+            if hasattr(upload, 'webkitRelativePath') and upload.webkitRelativePath:
+                raw_name = upload.webkitRelativePath.replace('\\', '/').lstrip('/')
             else:
-                rel_name = norm
+                raw_name = filename.replace('\\', '/').lstrip('/')
 
-            safe_name = f"{vendor.vendorid}_{rel_name.replace(' ', '_')}"
-            dest_path = os.path.join(tender_folder, safe_name)
+            # Split into non-empty segments
+            path_parts = [p for p in raw_name.split('/') if p]
+            normalized_files.append((upload, raw_name, path_parts))
 
-            # Ensure parent directories exist (handles nested webkitRelativePath)
-            parent_dir = os.path.dirname(dest_path)
-            if parent_dir:
-                os.makedirs(parent_dir, exist_ok=True)
+        # Decide which segment index represents the vendor folder:
+        # - If all files share the same first segment but have different second segments,
+        #   we treat the second segment as the vendor folder (e.g. "vendors/1/...", "vendors/2/...").
+        # - Otherwise, we treat the first segment as the vendor folder (e.g. "1/...", "2/...").
+        first_segments = set()
+        second_segments = set()
+        for _, _, parts in normalized_files:
+            if len(parts) > 1:
+                first_segments.add(parts[0])
+            if len(parts) > 2:
+                second_segments.add(parts[1])
 
-            with open(dest_path, "wb") as buffer:
-                shutil.copyfileobj(upload.file, buffer)
+        if len(first_segments) == 1 and len(second_segments) > 1:
+            vendor_segment_index = 1
+        else:
+            vendor_segment_index = 0
 
-            vendor.filename = filename
-            vendor.filepath = dest_path
+        # Group files by the chosen vendor folder segment
+        for upload, raw_name, parts in normalized_files:
+            if len(parts) > vendor_segment_index:
+                vendor_folder_name = parts[vendor_segment_index]
+            else:
+                vendor_folder_name = "default"
 
-            # Create attachment record in vendorattachments table
-            vendor_attachment = VendorAttachment(
-                vendorid=vendor.vendorid,
-                filename=filename,
-                filepath=dest_path,
-                uploadedby=uploader_str,
-                status="Active"
-            )
-            db.add(vendor_attachment)
+            if vendor_folder_name not in files_by_folder:
+                files_by_folder[vendor_folder_name] = []
 
-            # Extract data from document
-            try:
-                logger.info(f"Extracting data from vendor file: {filename}")
-                raw_form_data = extraction_service.extract_from_file(dest_path)
-                sanitized_form_data = jsonable_encoder(raw_form_data)
-                # Save extracted data to the attachment record, not the vendor record
-                vendor_attachment.form_data = sanitized_form_data
-                vendor.form_data = sanitized_form_data
-                logger.info(f"Successfully extracted data from {filename}")
-            except Exception as extract_err:
-                logger.warning(f"Error extracting data from {filename}: {extract_err}")
-                fallback_form_data = {
-                    "status": "extraction_failed",
-                    "error": str(extract_err),
-                    "filename": filename
-                }
-                sanitized_form_data = jsonable_encoder(fallback_form_data)
-                vendor_attachment.form_data = sanitized_form_data
-                vendor.form_data = sanitized_form_data
-
-            db.flush()
+            files_by_folder[vendor_folder_name].append((upload, raw_name))
+        
+        logger.info(f"Found {len(files_by_folder)} vendor folders: {list(files_by_folder.keys())}")
+        
+        # Process each folder
+        for vendor_folder_name, folder_files in files_by_folder.items():
+            logger.info(f"Processing folder '{vendor_folder_name}' with {len(folder_files)} files")
             
-            saved.append({
-                "vendorid": vendor.vendorid,
-                "filename": vendor.filename,
-                "filepath": vendor.filepath,
-                "form_data_status": vendor.form_data.get("status", "unknown"),
-            })
+            # Check / reuse vendor per tender + folder across uploads
+            if vendor_folder_name not in vendor_map:
+                # Try to find an existing vendor for this tender and folder name
+                existing_vendor = (
+                    db.query(Vendor)
+                    .filter(
+                        Vendor.tenderid == tenderid,
+                        Vendor.vendorform == vendor_folder_name,
+                    )
+                    .first()
+                )
+                if existing_vendor:
+                    vendor_map[vendor_folder_name] = existing_vendor.vendorid
+                    logger.info(
+                        f"Using existing vendor {existing_vendor.vendorid} for folder: '{vendor_folder_name}'"
+                    )
+                else:
+                    # Create vendor record for this folder (only once per folder)
+                    vendor = Vendor(
+                        tenderid=tenderid,
+                        vendorform=vendor_folder_name,  # Store the vendor folder name/ID
+                        uploadedby=uploader_str,
+                        form_data={},  # Initialize empty form_data
+                        status="Active",
+                    )
+                    db.add(vendor)
+                    db.flush()  # get vendor.vendorid
+                    vendor_map[vendor_folder_name] = vendor.vendorid
+                    logger.info(
+                        f"✓ Created vendor record {vendor.vendorid} for folder: '{vendor_folder_name}'"
+                    )
+            
+            vendor_id = vendor_map[vendor_folder_name]
+            logger.info(f"Using vendor ID {vendor_id} for folder '{vendor_folder_name}'")
+
+            # Process each file in this folder
+            for upload, raw_name in folder_files:
+                filename = upload.filename
+                
+                # Save file to disk with relative path preserved
+                norm = os.path.normpath(raw_name)
+                if norm.startswith('..') or os.path.isabs(norm):
+                    rel_name = os.path.basename(raw_name)
+                else:
+                    rel_name = norm
+
+                safe_name = f"{vendor_id}_{rel_name.replace(' ', '_').replace('/', '_')}"
+                dest_path = os.path.join(tender_folder, safe_name)
+
+                # Ensure parent directories exist (handles nested webkitRelativePath)
+                parent_dir = os.path.dirname(dest_path)
+                if parent_dir:
+                    os.makedirs(parent_dir, exist_ok=True)
+
+                with open(dest_path, "wb") as buffer:
+                    shutil.copyfileobj(upload.file, buffer)
+
+                # Create attachment record in vendorattachments table (one per file)
+                vendor_attachment = VendorAttachment(
+                    vendorid=vendor_id,
+                    filename=filename,
+                    filepath=dest_path,
+                    uploadedby=uploader_str,
+                    status="Active"
+                )
+                db.add(vendor_attachment)
+
+                # Extract data from document using OCR (doctr)
+                try:
+                    logger.info(f"Extracting data from vendor file: {filename}")
+                    form_data = extraction_service.extract_from_file(dest_path)
+                    # Save extracted data to the attachment record
+                    vendor_attachment.form_data = form_data
+                    logger.info(f"Successfully extracted data from {filename}")
+                    extraction_status = "success"
+                except Exception as extract_err:
+                    logger.warning(f"Error extracting data from {filename}: {extract_err}")
+                    form_data = {
+                        "status": "extraction_failed",
+                        "error": str(extract_err),
+                        "filename": filename
+                    }
+                    vendor_attachment.form_data = form_data
+                    extraction_status = "extraction_failed"
+
+                db.flush()
+                
+                saved.append({
+                    "vendorid": vendor_id,
+                    "vendorattachmentid": vendor_attachment.vendorattachmentid,
+                    "filename": filename,
+                    "filepath": dest_path,
+                    "form_data_status": extraction_status,
+                    "vendor_folder": vendor_folder_name,
+                })
 
         db.commit()
+        
+        # Log the final vendor mapping for debugging
+        logger.info(f"Final vendor mapping: {vendor_map}")
+        logger.info(f"Saved {len(saved)} files across {len(vendor_map)} vendors")
+        
         return {
             "success": True,
             "saved": saved,
-            "message": f"Uploaded {len(saved)} vendor file(s) with data extraction"
+            "vendor_map": vendor_map,  # Include for debugging
+            "message": f"Uploaded {len(saved)} vendor file(s) across {len(files_by_folder)} folders with data extraction"
         }
     except SQLAlchemyError as e:
         db.rollback()
@@ -618,7 +778,6 @@ def upload_vendors(
         db.rollback()
         logger.error(f"Unexpected error in upload_vendors: {e}")
         raise HTTPException(status_code=500, detail=f"Upload error: {str(e)}")
-
 
 
 @router.get("/upload/vendors/list/{tenderid}")
@@ -814,6 +973,16 @@ def update_tender(
         
         tender.title = title
         tender.status = status
+        # Also propagate status to any tender attachments so the status shown in
+        # the attachments listing matches the tender status in the DB.
+        try:
+            from app.models.upload_models import TenderAttachment
+            # Update all attachments for this tender to have the same status
+            db.query(TenderAttachment).filter(TenderAttachment.tenderid == tenderid).update({"status": status})
+        except Exception:
+            # If the attachments model isn't available for some reason, ignore
+            # the attachment update but still update the tender itself.
+            pass
         db.commit()
         db.refresh(tender)
         
