@@ -1,3 +1,4 @@
+// src/context/AuthContext.jsx
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { loginUser, registerUser, verifyToken } from '../api/auth';
 
@@ -8,11 +9,6 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [allowedPages, setAllowedPages] = useState([]);
 
-  // Ensure children is provided
-  if (!children) {
-    console.warn('AuthProvider: children prop is missing');
-  }
-
   // Check if user is logged in on app start
   useEffect(() => {
     checkAuthStatus();
@@ -21,15 +17,51 @@ export function AuthProvider({ children }) {
   const checkAuthStatus = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-      if (token) {
-        const response = await verifyToken();
-        if (response.success) {
-          setCurrentUser(response.user);
-          setAllowedPages(response.allowedPages || []);
-        } else {
-          // Token is invalid, clear storage
+      const storedUser = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+      
+      console.log('Auth check - Token exists:', !!token);
+      console.log('Auth check - Stored user exists:', !!storedUser);
+
+      if (token && storedUser) {
+        try {
+          // Try to verify token with backend
+          const response = await verifyToken();
+          console.log('Token verification response:', response);
+          
+          if (response.success) {
+            setCurrentUser(response.user);
+            setAllowedPages(response.allowedPages || []);
+          } else {
+            console.warn('Token verification failed, using stored user data');
+            // If token verification fails but we have stored user data,
+            // use the stored data as fallback
+            setCurrentUser(JSON.parse(storedUser));
+            setAllowedPages([]);
+          }
+        } catch (verifyError) {
+          console.warn('Token verification error, using stored data:', verifyError);
+          // Use stored user data as fallback if verification fails
+          setCurrentUser(JSON.parse(storedUser));
+          setAllowedPages([]);
+        }
+      } else if (token && !storedUser) {
+        // We have token but no user data - this shouldn't happen, but try to verify
+        try {
+          const response = await verifyToken();
+          if (response.success) {
+            setCurrentUser(response.user);
+            setAllowedPages(response.allowedPages || []);
+            // Store the user data for next time
+            const storage = localStorage.getItem('authToken') ? localStorage : sessionStorage;
+            storage.setItem('userData', JSON.stringify(response.user));
+          }
+        } catch (error) {
+          console.error('Failed to verify token:', error);
           clearAuthData();
         }
+      } else {
+        // No token found
+        clearAuthData();
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -50,21 +82,29 @@ export function AuthProvider({ children }) {
 
   const login = async (username, password, rememberMe = false) => {
     try {
-      const response = await loginUser({ username, password }); // remove role
-  
+      const response = await loginUser({ username, password });
+      console.log('Login response:', response);
+
       if (response.access_token) {
         const storage = rememberMe ? localStorage : sessionStorage;
         storage.setItem('authToken', response.access_token);
-  
-        const user = { username, role: response.user.role_name }; 
+
+        // Make sure we have user data from response
+        const user = response.user || { 
+          username: username, 
+          role: response.role_name || 'user' 
+        };
+        
         storage.setItem('userData', JSON.stringify(user));
-  
         setCurrentUser(user);
-        setAllowedPages([]);
-  
+        setAllowedPages(response.allowedPages || []);
+
         return { success: true, user };
       } else {
-        return { success: false, error: response.detail || 'Invalid credentials' };
+        return { 
+          success: false, 
+          error: response.detail || 'Invalid credentials' 
+        };
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -74,8 +114,8 @@ export function AuthProvider({ children }) {
       };
     }
   };
-  
-  
+
+  // ... rest of your methods remain the same
   const register = async (userData) => {
     try {
       const response = await registerUser(userData);
@@ -97,26 +137,26 @@ export function AuthProvider({ children }) {
 
   const logout = useCallback(() => {
     clearAuthData();
-    // Optional: Call logout API if you have one
-    // await logoutUser();
+    // Redirect to login page after logout
+    window.location.href = '/login';
   }, []);
 
   const checkSession = useCallback(() => {
     const token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
-    if (!token) {
-      return { valid: false, message: 'No token found' };
+    const storedUser = localStorage.getItem('userData') || sessionStorage.getItem('userData');
+    
+    if (!token || !storedUser) {
+      return { valid: false, message: 'No authentication data found' };
     }
 
     try {
-      // You can add more sophisticated token validation here
-      // For now, we'll assume the token is valid if it exists and we have a currentUser
       return { 
         valid: !!currentUser, 
         user: currentUser,
         allowedPages: allowedPages 
       };
     } catch (error) {
-      return { valid: false, message: 'Invalid token' };
+      return { valid: false, message: 'Invalid session' };
     }
   }, [currentUser, allowedPages]);
 
@@ -137,11 +177,6 @@ export function AuthProvider({ children }) {
     isAuthenticated: !!currentUser
   };
 
-  // Ensure value is always an object
-  if (!value) {
-    console.error('AuthProvider value is undefined');
-  }
-
   return (
     <AuthContext.Provider value={value}>
       {children}
@@ -149,15 +184,11 @@ export function AuthProvider({ children }) {
   );
 }
 
-// Custom hook to use auth context
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === null || context === undefined) {
-    console.error('useAuth called outside AuthProvider. Make sure your component is wrapped in <AuthProvider>');
-    console.trace('Stack trace:');
-    throw new Error('useAuth must be used within an AuthProvider. Please wrap your app with <AuthProvider> in App.jsx');
+    console.error('useAuth called outside AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 }
-
-export default AuthContext;

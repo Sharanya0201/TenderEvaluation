@@ -1,6 +1,6 @@
 
 from typing import List
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status, Request
 from starlette.responses import FileResponse
 from sqlalchemy.orm import Session
 import random
@@ -13,8 +13,7 @@ import json
 import logging
 from typing import List, Optional
 from fastapi.encoders import jsonable_encoder
-
-
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 # Add these imports with your existing imports
 from app.models.user import User, Role, TenderType, EvaluationCriterion
 from app.models.upload_models import Tender, Vendor, TenderAttachment, VendorAttachment
@@ -71,6 +70,7 @@ from app.models.upload_models import Tender, Vendor, TenderAttachment, VendorAtt
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+security = HTTPBearer()
 
 
 # ============================= AUTH =============================
@@ -94,10 +94,45 @@ def logout():
 
 
 @router.get("/verify")
-def verify():
-    """Simple token verification endpoint for the frontend ping."""
-    return {"success": True}
-
+async def verify_token(request: Request):
+    """
+    Verify the current token and return user information
+    """
+    try:
+        # Get the authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials"
+            )
+        
+        token = auth_header.replace("Bearer ", "")
+        
+        # Verify the token
+        user_data = verify_token(token)
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or expired token"
+            )
+        
+        return {
+            "success": True,
+            "user": {
+                "username": user_data.get("username"),
+                "role": user_data.get("role")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Token verification error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token verification failed"
+        )
 
 @router.post("/check-duplicate")
 def check_duplicate(field: str, value: str, db: Session = Depends(get_db)):

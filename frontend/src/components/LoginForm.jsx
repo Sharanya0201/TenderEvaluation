@@ -26,6 +26,20 @@ const LoginForm = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
+
+const handleLogin = async (credentials) => {
+  const result = await login(credentials.username, credentials.password, credentials.rememberMe);
+  
+  if (result.success) {
+    // Redirect to the page they tried to visit or dashboard
+    const from = location.state?.from?.pathname || '/dashboard';
+    navigate(from, { replace: true });
+  } else {
+    // Handle login error
+    setError(result.error);
+  }
+};
+
   // Validation rules
   const validateField = (name, value) => {
     switch (name) {

@@ -2,7 +2,7 @@
 import React, { useContext, useState, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { useSidebar } from "../context/SidebarContext";
-import LogoutButton from "../components/LogoutButton";
+import LogoutButton from "../components/LogoutButton"
 import {
   BarChart,
   Bar,
