@@ -404,8 +404,8 @@ function Sidebar() {
       <nav className="sb-nav">
         <div className="sb-nav-list">
           {renderNavigationSection('main', filteredNavigation.main, "Main", "home")}
-          {renderNavigationSection('tenders', filteredNavigation.tenders, "Tender Management", "view_timeline")}
-          {renderNavigationSection('vendors', filteredNavigation.vendors, "Vendor Management", "business_center")}
+          {renderNavigationSection('tenders', filteredNavigation.tenders, "Tender Vendor Management", "view_timeline")}
+          {/* {renderNavigationSection('vendors', filteredNavigation.vendors, "Vendor Management", "business_center")} */}
           {renderNavigationSection('uploads', filteredNavigation.uploads, "Upload Management", "cloud_upload")}
           {renderNavigationSection('users', filteredNavigation.users, "User Management", "people")}
           {renderNavigationSection('roles', filteredNavigation.roles, "Role Management", "admin_panel_settings")}
